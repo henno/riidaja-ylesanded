@@ -13,19 +13,25 @@ class ResultsModel {
   }
 
   public function getUserBest($email, $exerciseId) {
-    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND exercise_id = ?');
-    $stmt->execute([$email, $exerciseId]);
+    // Handle both string ('01') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+
+    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+    $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
 
   public function getGlobalBest($exerciseId) {
-    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ?');
-    $stmt->execute([$exerciseId]);
+    // Handle both string ('01') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+
+    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    $stmt->execute([$exerciseId, $numericExerciseId]);
     $elapsed = $stmt->fetchColumn();
 
     if ($elapsed !== false) {
-      $stmt = $this->db->prepare('SELECT name FROM results WHERE exercise_id = ? AND elapsed = ? LIMIT 1');
-      $stmt->execute([$exerciseId, $elapsed]);
+      $stmt = $this->db->prepare('SELECT name FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed = ? LIMIT 1');
+      $stmt->execute([$exerciseId, $numericExerciseId, $elapsed]);
       $name = $stmt->fetchColumn();
       return ['elapsed' => $elapsed, 'name' => $name];
     }
@@ -34,15 +40,21 @@ class ResultsModel {
   }
 
   public function getAverage($exerciseId) {
-    $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ?');
-    $stmt->execute([$exerciseId]);
+    // Handle both string ('01') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+
+    $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    $stmt->execute([$exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
 
   public function getAll($exerciseId = null) {
     if ($exerciseId) {
-      $stmt = $this->db->prepare('SELECT * FROM results WHERE exercise_id = ? ORDER BY timestamp DESC');
-      $stmt->execute([$exerciseId]);
+      // Handle both string ('01') and numeric (1) exercise IDs
+      $numericExerciseId = (int)$exerciseId;
+
+      $stmt = $this->db->prepare('SELECT * FROM results WHERE exercise_id = ? OR exercise_id = ? ORDER BY timestamp DESC');
+      $stmt->execute([$exerciseId, $numericExerciseId]);
       return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } else {
       return $this->db->query('SELECT * FROM results ORDER BY timestamp DESC')->fetchAll(PDO::FETCH_ASSOC);
@@ -51,8 +63,11 @@ class ResultsModel {
 
   public function getAllByEmailAndExercise($email, $exerciseId = null) {
     if ($exerciseId) {
-      $stmt = $this->db->prepare('SELECT * FROM results WHERE email = ? AND exercise_id = ? ORDER BY timestamp DESC');
-      $stmt->execute([$email, $exerciseId]);
+      // Handle both string ('01') and numeric (1) exercise IDs
+      $numericExerciseId = (int)$exerciseId;
+
+      $stmt = $this->db->prepare('SELECT * FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?) ORDER BY timestamp DESC');
+      $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     } else {
       $stmt = $this->db->prepare('SELECT * FROM results WHERE email = ? ORDER BY timestamp DESC');
       $stmt->execute([$email]);
@@ -66,8 +81,11 @@ class ResultsModel {
   }
 
   public function getUserCompletionCount($email, $exerciseId) {
-    $stmt = $this->db->prepare('SELECT COUNT(*) FROM results WHERE email = ? AND exercise_id = ?');
-    $stmt->execute([$email, $exerciseId]);
+    // Handle both string ('01') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+
+    $stmt = $this->db->prepare('SELECT COUNT(*) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+    $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
 
@@ -88,6 +106,9 @@ class ResultsModel {
     $results = [];
 
     foreach ($exercises as $exerciseId) {
+      // Format the exercise ID with leading zero if needed
+      $formattedExerciseId = sprintf('%02d', $exerciseId);
+
       $stmt = $this->db->prepare('
         SELECT
           r.email,
@@ -98,13 +119,13 @@ class ResultsModel {
         FROM
           results r
         WHERE
-          r.exercise_id = ?
+          r.exercise_id = ? OR r.exercise_id = ?
         GROUP BY
           r.email, r.name, r.exercise_id
         ORDER BY
           first_timestamp DESC
       ');
-      $stmt->execute([$exerciseId]);
+      $stmt->execute([$exerciseId, $formattedExerciseId]);
       $exerciseResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
       if (!empty($exerciseResults)) {
@@ -113,5 +134,26 @@ class ResultsModel {
     }
 
     return $results;
+  }
+
+  /**
+   * Get user's attempts for an exercise in chronological order
+   *
+   * @param string $email User's email
+   * @param string $exerciseId Exercise ID
+   * @return array Array of attempt results (elapsed times)
+   */
+  public function getUserAttempts($email, $exerciseId) {
+    // Handle both string ('01') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+
+    $stmt = $this->db->prepare('
+      SELECT elapsed
+      FROM results
+      WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)
+      ORDER BY timestamp ASC
+    ');
+    $stmt->execute([$email, $exerciseId, $numericExerciseId]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
   }
 }

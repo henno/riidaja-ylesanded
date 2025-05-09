@@ -2,22 +2,23 @@
 <style>
   .completion-box {
     display: inline-block;
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
     margin: 0 2px;
     border: 1px solid #333;
+    text-align: center;
+    line-height: 30px;
+    font-weight: bold;
+    color: white;
   }
   .completion-box.not-completed {
     background-color: #000;
   }
-  .completion-box.completed-once {
-    background-color: #f00;
-  }
-  .completion-box.completed-twice {
-    background-color: #ffa500;
+  .completion-box.completed {
+    background-color: #ffa500; /* Orange for 1-2 completions */
   }
   .completion-box.completed-thrice {
-    background-color: #0a0;
+    background-color: #0a0; /* Green for 3+ completions */
   }
   .completion-container {
     display: flex;
@@ -55,21 +56,56 @@
       $avg = $resultsModel->getAverage($id);
       $avgFormatted = $avg ? number_format($avg, 2) . ' s' : '-';
 
-      // Get completion count for this exercise
-      $completionCount = $resultsModel->getUserCompletionCount($userEmail, $id);
+      // Get user's attempts for this exercise
+      $attempts = $resultsModel->getUserAttempts($userEmail, $id);
+      $completionCount = count($attempts);
 
       // Generate completion boxes HTML
       $completionBoxes = '<div class="completion-container">';
-      for ($i = 0; $i < 3; $i++) {
-        if ($completionCount >= 3) {
-          $boxClass = 'completed-thrice'; // All green if completed 3 or more times
-        } elseif ($i < $completionCount) {
-          $boxClass = $i == 0 ? 'completed-once' : 'completed-twice'; // First red, second orange
-        } else {
-          $boxClass = 'not-completed'; // Black for not completed
+
+      // When the student has not passed the exercise a single time: 3 black boxes
+      if ($completionCount == 0) {
+        for ($i = 0; $i < 3; $i++) {
+          $completionBoxes .= '<div class="completion-box not-completed"></div>';
         }
-        $completionBoxes .= '<div class="completion-box ' . $boxClass . '"></div>';
       }
+      // When the student has passed the exercise 1-2 times: orange boxes with scores + black boxes
+      elseif ($completionCount < 3) {
+        // Show completed attempts (orange boxes with scores)
+        for ($i = 0; $i < $completionCount; $i++) {
+          $score = round($attempts[$i]);
+          $completionBoxes .= '<div class="completion-box completed">' . $score . '</div>';
+        }
+
+        // Fill remaining slots with black boxes
+        for ($i = $completionCount; $i < 3; $i++) {
+          $completionBoxes .= '<div class="completion-box not-completed"></div>';
+        }
+      }
+      // When the student has passed the exercise 3+ times: three green boxes with scores
+      else {
+        // For 3+ completions, show the three most relevant scores in green boxes
+        if ($completionCount > 3) {
+          // When more than 3 attempts:
+          // - Rightmost box: last result (newest)
+          // - Middle box: result before the last
+          // - Leftmost box: result before the middle
+
+          // Get the last 3 results in reverse order (oldest to newest)
+          $relevantAttempts = array_slice($attempts, -3);
+
+          foreach ($relevantAttempts as $attempt) {
+            $score = round($attempt);
+            $completionBoxes .= '<div class="completion-box completed-thrice">' . $score . '</div>';
+          }
+        } else { // Exactly 3 completions
+          foreach ($attempts as $attempt) {
+            $score = round($attempt);
+            $completionBoxes .= '<div class="completion-box completed-thrice">' . $score . '</div>';
+          }
+        }
+      }
+
       $completionBoxes .= '</div>';
 
       echo '<tr>';

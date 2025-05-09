@@ -16,6 +16,8 @@ class ResultsController {
     if ($showSummary) {
       if ($exerciseFilter) {
         // Show summary for a specific exercise
+        // Handle both string ('01') and numeric (1) exercise IDs
+        $numericExerciseId = (int)$exerciseFilter;
         $stmt = $this->resultsModel->getDb()->prepare('
           SELECT
             r.email,
@@ -26,13 +28,13 @@ class ResultsController {
           FROM
             results r
           WHERE
-            r.exercise_id = ?
+            r.exercise_id = ? OR r.exercise_id = ?
           GROUP BY
             r.email, r.name, r.exercise_id
           ORDER BY
             first_timestamp DESC
         ');
-        $stmt->execute([$exerciseFilter]);
+        $stmt->execute([$exerciseFilter, $numericExerciseId]);
         $summaryResults = [$exerciseFilter => $stmt->fetchAll(PDO::FETCH_ASSOC)];
       } else {
         // Show summary for all exercises
