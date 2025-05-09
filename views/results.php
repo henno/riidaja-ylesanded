@@ -1,11 +1,30 @@
 <?php
-if ($exerciseFilter) {
+if ($emailFilter && $exerciseFilter) {
+  echo "<h2>Tulemused – " . htmlspecialchars($emailFilter) . " – Ülesanne " . htmlspecialchars($exerciseFilter) . "</h2>";
+  echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
+} elseif ($emailFilter) {
+  echo "<h2>Tulemused – " . htmlspecialchars($emailFilter) . "</h2>";
+  echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
+} elseif ($exerciseFilter) {
   echo "<h2>Tulemused – Ülesanne " . htmlspecialchars($exerciseFilter) . "</h2>";
   echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
 } else {
   echo "<h2>Kõik tulemused</h2>";
 }
 ?>
+
+<div class="view-toggle">
+  <label>
+    <input type="checkbox" id="summary-toggle" <?php echo $showSummary ? 'checked' : ''; ?>>
+    Kokkuvõte
+  </label>
+</div>
+
+<style>
+  .view-toggle {
+    margin: 15px 0;
+  }
+</style>
 <table>
   <thead>
     <tr><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th>Tulemus (s)</th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
@@ -18,7 +37,7 @@ if ($exerciseFilter) {
       <td><?= htmlspecialchars($row['name']) ?></td>
       <td><?= htmlspecialchars($row['email']) ?></td>
       <td><?= htmlspecialchars($row['exercise_id']) ?></td>
-      <td><?= $row['elapsed'] ?></td>
+      <td><?= round($row['elapsed']) ?> s</td>
       <?php if ($isAdmin): ?>
         <td><a class="delete-link" href="?page=results&delete=<?= $row['id'] ?>" onclick="return confirm('Kustuta see kirje?')">🗑</a></td>
       <?php endif; ?>
@@ -27,6 +46,14 @@ if ($exerciseFilter) {
   </tbody>
 </table>
 <script>
+  // Toggle between summary and detailed view
+  document.getElementById('summary-toggle').addEventListener('change', function() {
+    const url = new URL(window.location.href);
+    url.searchParams.set('summary', this.checked ? '1' : '0');
+    window.location.href = url.toString();
+  });
+
+  // Make table headers sortable
   document.querySelectorAll('th').forEach((header, index) => {
     header.style.cursor = 'pointer';
     header.addEventListener('click', () => {
