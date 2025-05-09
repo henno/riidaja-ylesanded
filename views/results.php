@@ -34,13 +34,30 @@ if ($exerciseFilter) {
       const tbody = table.querySelector('tbody');
       const rows = Array.from(tbody.querySelectorAll('tr'));
       const isNumeric = !isNaN(rows[0].children[index].innerText.trim());
+      const isDate = index === 0; // First column is timestamp
       const ascending = header.dataset.sortOrder !== 'asc';
       rows.sort((a, b) => {
         let aText = a.children[index].innerText.trim();
         let bText = b.children[index].innerText.trim();
-        return isNumeric
-          ? ascending ? (aText - bText) : (bText - aText)
-          : ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+
+        if (isDate) {
+          // Parse date in format dd.mm.yyyy HH:MM
+          const aParts = aText.split(' ');
+          const bParts = bText.split(' ');
+
+          const aDateParts = aParts[0].split('.');
+          const bDateParts = bParts[0].split('.');
+
+          // Create date objects (format: yyyy-mm-dd HH:MM)
+          const aDate = new Date(`${aDateParts[2]}-${aDateParts[1]}-${aDateParts[0]} ${aParts[1]}`);
+          const bDate = new Date(`${bDateParts[2]}-${bDateParts[1]}-${bDateParts[0]} ${bParts[1]}`);
+
+          return ascending ? aDate - bDate : bDate - aDate;
+        } else if (isNumeric) {
+          return ascending ? (aText - bText) : (bText - aText);
+        } else {
+          return ascending ? aText.localeCompare(bText) : bText.localeCompare(aText);
+        }
       });
       rows.forEach(row => tbody.appendChild(row));
       document.querySelectorAll('th').forEach(th => th.removeAttribute('data-sort-order'));
