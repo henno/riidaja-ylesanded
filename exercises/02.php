@@ -41,7 +41,7 @@
   }
 </style>
 
-<p>Taasta iga tekstikastis lausete õige järjekord. Kui laused on õiges järjekorras, muutub tekstikasti taust roheliseks. Sul on aega 2 minut (180 sekundit).</p>
+<p>Taasta iga tekstikastis lausete õige järjekord. Kui laused on õiges järjekorras, muutub tekstikasti taust roheliseks. Sul on aega 2 minut (120 sekundit).</p>
 <form id="task-form">
   <table id="sentence-table">
     <thead>
@@ -176,7 +176,7 @@ function handleInput() {
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-  if (elapsed >= 60) {
+  if (elapsed >= 120) {
     clearInterval(timerInterval);
     alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
     location.reload();
