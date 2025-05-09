@@ -58,7 +58,7 @@ const timerDisplay = document.getElementById('timer');
 let startTime      = null;
 let timerInterval  = null;
 const inputs       = [];
-const rows         = 20;
+const rows         = 13;
 
 // URL-id ja juhendid
 const urlTasks = [
