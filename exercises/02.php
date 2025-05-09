@@ -41,7 +41,7 @@
   }
 </style>
 
-<p>Taasta iga tekstikastis lausete õige järjekord. Kui laused on õiges järjekorras, muutub tekstikasti taust roheliseks. Sul on aega 1 minut (60 sekundit).</p>
+<p>Taasta iga tekstikastis lausete õige järjekord. Kui laused on õiges järjekorras, muutub tekstikasti taust roheliseks. Sul on aega 2 minut (180 sekundit).</p>
 <form id="task-form">
   <table id="sentence-table">
     <thead>
