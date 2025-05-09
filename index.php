@@ -15,7 +15,7 @@ use TheNetworg\OAuth2\Client\Provider\Azure;
 
 $provider = new Azure([
   'clientId' => AZURE_CLIENT_ID,
-  'clientSecret' => AZURE_CLIENT_SECRET, 
+  'clientSecret' => AZURE_CLIENT_SECRET,
   'scopes'                 => ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
   'defaultEndPointVersion' => '2.0',
   'resource'               => 'https://graph.microsoft.com'
@@ -28,36 +28,57 @@ if (isset($_GET['logout'])) {
     setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
   }
   session_destroy();
-  $logoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=' . urlencode('https://torva.ee/riidaja/');
-  header('Location: ' . $logoutUrl);
-  exit;
-}
 
-if (!isset($_SESSION['accessToken'])) {
-  if (!isset($_GET['code'])) {
-    $authUrl = $provider->getAuthorizationUrl(['prompt' => 'select_account']);
-    $_SESSION['oauth2state'] = $provider->getState();
-    header('Location: ' . $authUrl);
+  // If bypass is enabled, just redirect to the home page
+  if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
+    header('Location: ./');
+    exit;
+  } else {
+    // Normal Azure logout
+    $logoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=' . urlencode('https://torva.ee/riidaja/');
+    header('Location: ' . $logoutUrl);
     exit;
   }
-  if (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['oauth2state'])) {
-    unset($_SESSION['oauth2state']);
-    exit('Invalid state');
+}
+
+// Check if authentication bypass is enabled
+if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
+  // Create a test user session without Azure authentication
+  if (!isset($_SESSION['accessToken'])) {
+    $_SESSION['accessToken'] = 'bypass_token';
+    $_SESSION['user'] = [
+      'name'  => 'Test User',
+      'email' => 'test.user@example.com'
+    ];
   }
-  $token = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
-  $_SESSION['accessToken'] = $token->getToken();
+} else {
+  // Normal Azure authentication flow
+  if (!isset($_SESSION['accessToken'])) {
+    if (!isset($_GET['code'])) {
+      $authUrl = $provider->getAuthorizationUrl(['prompt' => 'select_account']);
+      $_SESSION['oauth2state'] = $provider->getState();
+      header('Location: ' . $authUrl);
+      exit;
+    }
+    if (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['oauth2state'])) {
+      unset($_SESSION['oauth2state']);
+      exit('Invalid state');
+    }
+    $token = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
+    $_SESSION['accessToken'] = $token->getToken();
 
-  $graph = new Graph();
-  $graph->setAccessToken($_SESSION['accessToken']);
+    $graph = new Graph();
+    $graph->setAccessToken($_SESSION['accessToken']);
 
-  $user = $graph->createRequest('GET', '/me')
-                ->setReturnType(Model\User::class)
-                ->execute();
+    $user = $graph->createRequest('GET', '/me')
+                  ->setReturnType(Model\User::class)
+                  ->execute();
 
-  $_SESSION['user'] = [
-    'name'  => $user->getDisplayName(),
-    'email' => $user->getUserPrincipalName()
-  ];
+    $_SESSION['user'] = [
+      'name'  => $user->getDisplayName(),
+      'email' => $user->getUserPrincipalName()
+    ];
+  }
 }
 
 $isAdmin = isset($_SESSION['user']['email']) && $_SESSION['user']['email'] === 'henno.taht@torva.edu.ee';
