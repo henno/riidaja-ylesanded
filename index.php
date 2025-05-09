@@ -78,6 +78,30 @@ if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
       'name'  => $user->getDisplayName(),
       'email' => $user->getUserPrincipalName()
     ];
+
+    // Redirect to clean URL after successful authentication
+    if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
+      // Preserve important query parameters but remove authentication-related ones
+      $params = $_GET;
+      unset($params['code']);
+      unset($params['state']);
+      unset($params['session_state']);
+
+      $redirectUrl = strtok($_SERVER['REQUEST_URI'], '?');
+
+      // Add remaining parameters back to the URL
+      if (!empty($params)) {
+        $redirectUrl .= '?' . http_build_query($params);
+      }
+
+      // Add cache control headers to prevent caching of the authentication URL
+      header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+      header('Pragma: no-cache');
+      header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+
+      header('Location: ' . $redirectUrl);
+      exit;
+    }
   }
 }
 
@@ -92,12 +116,33 @@ if ($isAdmin && isset($_GET['delete'])) {
 }
 
 $page = $_GET['page'] ?? 'tasks';
+
+// Set cache control headers for the main page
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
 ?>
 <!DOCTYPE html>
 <html lang="et">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="Thu, 01 Jan 1970 00:00:00 GMT">
   <title>Õpilaste Ülesanded</title>
+  <script>
+    // Clean up URL in browser address bar if it contains authentication parameters
+    if (window.location.href.includes('code=') || window.location.href.includes('state=') || window.location.href.includes('session_state=')) {
+      // Get current URL and remove authentication parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete('code');
+      url.searchParams.delete('state');
+      url.searchParams.delete('session_state');
+
+      // Replace the URL in the browser without reloading the page
+      window.history.replaceState({}, document.title, url.toString());
+    }
+  </script>
   <style>
     body { font-family: sans-serif; }
     nav.topbar { background: #f0f0f0; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
