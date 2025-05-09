@@ -123,11 +123,6 @@ const urlTasks = [
     expected: "https://health-clinic.med/departments/cardiology/services/"
   },
   {
-    url: "https://online-learning.edu/courses/programming/web-development/frontend/javascript/advanced-concepts?instructor=jane_doe&duration=8weeks&difficulty=intermediate&prerequisites=basic_javascript&certificate=included&projects=5&live_sessions=weekly&forum_support=24_7&materials=downloadable&mobile_access=yes&subtitles=multiple_languages&pace=self_directed&reviews=4.8&enrolled=12500&completion_rate=87percent",
-    instruction: "Kustuta URL-ist kõik pärast 'frontend/'",
-    expected: "https://online-learning.edu/courses/programming/web-development/frontend/"
-  },
-  {
     url: "https://smart-home-devices.tech/products/security/cameras/outdoor/night-vision-4k-camera?resolution=3840x2160&weather_resistant=ip67&connectivity=wifi_ethernet&storage=cloud_local&motion_detection=advanced&night_vision=50meters&field_of_view=130degrees&power=wired_battery&app_compatibility=ios_android&voice_control=alexa_google_siri&installation=diy_professional&warranty=3years&price=299.99",
     instruction: "Kustuta URL-ist kõik pärast 'cameras/'",
     expected: "https://smart-home-devices.tech/products/security/cameras/"
@@ -201,11 +196,6 @@ const urlTasks = [
     url: "https://gaming-laptops.tech/high-performance/17-inch/rtx-series/i9-processor/ultra-gaming-pro?processor=intel_i9_12900hk&gpu=nvidia_rtx_3080ti_16gb&ram=64gb_ddr5&storage=2tb_nvme_ssd&display=17_3inch_4k_144hz&keyboard=per_key_rgb&cooling=liquid_metal_vapor_chamber&battery=99whr&weight=6_2lbs&dimensions=15_6x10_7x0_92inches&ports=thunderbolt4_usb3_2_hdmi2_1&wifi=6e&bluetooth=5_2&operating_system=windows_11_pro&warranty=2year_accidental_damage",
     instruction: "Kustuta URL-ist kõik pärast '17-inch/'",
     expected: "https://gaming-laptops.tech/high-performance/17-inch/"
-  },
-  {
-    url: "https://smart-watches.wearable/fitness-tracking/heart-rate-monitor/gps-enabled/waterproof-design/premium-model?battery_life=14days&display=1_4inch_amoled&resolution=454x454&water_resistance=50meters&sensors=heart_rate_spo2_temperature_accelerometer_gyroscope_barometer&connectivity=bluetooth5_0_wifi&compatibility=ios_android&tracking_features=sleep_stress_steps_calories_floors&sports_modes=120&notifications=calls_texts_apps&voice_assistant=alexa_google&payment=contactless&music_storage=500songs&weight=32grams",
-    instruction: "Kustuta URL-ist kõik pärast 'heart-rate-monitor/'",
-    expected: "https://smart-watches.wearable/fitness-tracking/heart-rate-monitor/"
   },
   {
     url: "https://digital-cameras.photo/mirrorless/full-frame/professional/high-resolution/landscape-specialized?megapixels=61&sensor_size=35mm&iso_range=100_51200&dynamic_range=15stops&autofocus_points=759&video_resolution=8k30p_4k120p&stabilization=5axis_8stops&weather_sealing=extensive&battery_life=500shots&continuous_shooting=10fps&storage=dual_cfexpress_type_b&evf_resolution=9_44million_dots&lcd=3_2inch_2100k_dots&connectivity=wifi6_bluetooth5_2_usbc&weight=675g&shutter_durability=500k_cycles",
