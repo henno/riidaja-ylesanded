@@ -42,7 +42,7 @@ const timerDisplay = document.getElementById('timer');
 let startTime      = null;
 let timerInterval  = null;
 const inputs       = [];
-const rows         = 40;
+const rows         = 30;
 
 const generateWord = () => {
   const letters = 'abcdefghijklmnopqrstuvwxyz';
