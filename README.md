@@ -2,6 +2,61 @@
 
 This is a web application for student exercises.
 
+## Quick Start with Docker
+
+The easiest way to get started is using Docker, which sets up PHP with SQLite support.
+
+### Prerequisites
+- Docker
+
+### Running with Docker
+
+1. **Start the server**
+   ```bash
+   ./php_server.sh start
+   ```
+   This will build the Docker image and start the PHP development server at http://localhost:8000
+
+2. **Initialize the database**
+   ```bash
+   docker exec riidaja-server php /app/migrate.php
+   ```
+   Or as a one-off command (if server isn't running):
+   ```bash
+   docker run --rm -v $(pwd):/app -w /app riidaja-app php migrate.php
+   ```
+
+3. **Access the application**
+   - Web interface: http://localhost:8000
+
+4. **Stopping the server**
+   ```bash
+   ./php_server.sh stop
+   ```
+
+5. **Restart the server**
+   ```bash
+   ./php_server.sh restart
+   ```
+
+6. **Run Composer commands**
+   ```bash
+   ./php_server.sh composer install
+   ./php_server.sh composer require vendor/package
+   ```
+
+### Docker Details
+
+The Docker setup uses:
+- PHP 8.4.7 with Alpine Linux (minimal footprint)
+- PHP's built-in development server
+- SQLite support pre-installed
+- Code mounted as a volume for live updates
+
+## Manual Setup
+
+If you prefer to run the application directly on your host system, follow these instructions.
+
 ## Database Setup
 
 ### Setting Up a New Database from Scratch
