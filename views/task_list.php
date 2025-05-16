@@ -12,7 +12,8 @@
     color: white;
   }
   .completion-box.not-completed {
-    background-color: #000;
+    background-color: #ccc; /* Gray for no attempts */
+    color: #000; /* Black text */
   }
   .completion-box.completed {
     background-color: #ffa500; /* Orange for 1-2 completions */
@@ -70,10 +71,10 @@
       // Generate completion boxes HTML
       $completionBoxes = '<div class="completion-container">';
 
-      // When the student has not passed the exercise a single time: 3 black boxes
+      // When the student has not passed the exercise a single time: 3 gray boxes with question marks
       if ($completionCount == 0) {
         for ($i = 0; $i < 3; $i++) {
-          $completionBoxes .= '<div class="completion-box not-completed"></div>';
+          $completionBoxes .= '<div class="completion-box not-completed">?</div>';
         }
       }
       // When the student has passed the exercise 1-2 times: orange boxes with scores + black boxes
@@ -84,9 +85,9 @@
           $completionBoxes .= '<div class="completion-box completed">' . $score . '</div>';
         }
 
-        // Fill remaining slots with black boxes
+        // Fill remaining slots with gray boxes with question marks
         for ($i = $completionCount; $i < 3; $i++) {
-          $completionBoxes .= '<div class="completion-box not-completed"></div>';
+          $completionBoxes .= '<div class="completion-box not-completed">?</div>';
         }
       }
       // When the student has passed the exercise 3+ times: three green boxes with scores

@@ -46,7 +46,8 @@ if ($exerciseFilter) {
     font-weight: bold;
   }
   .no-attempt {
-    background-color: #f0f0f0; /* Light gray background */
+    background-color: #ccc; /* Consistent gray background */
+    color: #000; /* Black text */
   }
 </style>
 

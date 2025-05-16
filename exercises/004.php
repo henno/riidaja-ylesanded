@@ -76,7 +76,7 @@
   }
 </style>
 
-<p>Parandage parempoolses tekstikastis olev tekst, et see vastaks vasakpoolsele originaaltekstile. Tekst sisaldab mitmeid vigu, mida tuleb parandada. Kui tekst on õigesti parandatud, muutub tekstikasti taust roheliseks. Sul on aega 120 sekundit.</p>
+<p>Paranda parempoolses tekstikastis olev tekst, et see vastaks vasakpoolsele originaaltekstile. Tekst sisaldab mitmeid vigu, mida tuleb parandada. Kui tekst on õigesti parandatud, muutub tekstikasti taust roheliseks. NB! Hiirega ei saa teksti valida, kasuta klaviatuuri (Shift+nooleklahvid). Sul on aega 60 sekundit.</p>
 <form id="task-form">
   <table id="text-correction-table">
     <thead>
@@ -254,10 +254,27 @@ function handleInput() {
 
 correctionTextarea.addEventListener('input', handleInput);
 
+// Disable mouse selection but allow mouse cursor positioning
+let lastClickPos = 0;
+
+correctionTextarea.addEventListener('mousedown', function(e) {
+  // Store the cursor position on mouse down
+  lastClickPos = this.selectionStart;
+});
+
+correctionTextarea.addEventListener('mousemove', function(e) {
+  if (e.buttons === 1) { // If mouse button is held down (dragging)
+    // Set cursor to the position from the mousedown event
+    // This prevents selection while allowing clicks to position cursor
+    this.setSelectionRange(lastClickPos, lastClickPos);
+    return false;
+  }
+});
+
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-  if (elapsed >= 120) {
+  if (elapsed >= 60) {
     clearInterval(timerInterval);
     alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
     location.reload();
