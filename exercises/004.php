@@ -254,7 +254,7 @@ function handleInput() {
 
 correctionTextarea.addEventListener('input', handleInput);
 
-// Disable mouse selection but allow mouse cursor positioning
+// Disable mouse selection completely while allowing cursor positioning
 let lastClickPos = 0;
 
 correctionTextarea.addEventListener('mousedown', function(e) {
@@ -270,6 +270,30 @@ correctionTextarea.addEventListener('mousemove', function(e) {
     return false;
   }
 });
+
+// Prevent double-click selection
+correctionTextarea.addEventListener('dblclick', function(e) {
+  e.preventDefault();
+  return false;
+});
+
+// Prevent selection on mouseup
+correctionTextarea.addEventListener('mouseup', function() {
+  this.setSelectionRange(this.selectionStart, this.selectionStart);
+});
+
+// Prevent copy/paste/cut context menu
+correctionTextarea.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  return false;
+});
+
+// Additional measure: constantly check for selection
+setInterval(function() {
+  if (correctionTextarea.selectionStart !== correctionTextarea.selectionEnd) {
+    correctionTextarea.setSelectionRange(correctionTextarea.selectionStart, correctionTextarea.selectionStart);
+  }
+}, 100);
 
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
