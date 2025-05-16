@@ -156,4 +156,34 @@ class ResultsModel {
     $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
   }
+
+  /**
+   * Get exercise information
+   *
+   * @param string $exerciseId Exercise ID
+   * @return array|null Exercise information or null if not found
+   */
+  public function getExercise($exerciseId) {
+    // Handle both string ('001') and numeric (1) exercise IDs
+    $numericExerciseId = (int)$exerciseId;
+    
+    $stmt = $this->db->prepare('
+      SELECT id, title, target_time, description 
+      FROM exercises 
+      WHERE id = ? OR id = ?
+      LIMIT 1
+    ');
+    $stmt->execute([$exerciseId, $numericExerciseId]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+  }
+
+  /**
+   * Get all exercises
+   *
+   * @return array Array of exercise information
+   */
+  public function getAllExercisesInfo() {
+    $stmt = $this->db->query('SELECT id, title, target_time, description FROM exercises ORDER BY id');
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
 }

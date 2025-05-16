@@ -8,7 +8,7 @@ class TaskController {
   }
 
 public function list($userEmail) {
-  $files = glob(__DIR__ . '/../exercises/[0-9][0-9].php');
+  $files = glob(__DIR__ . '/../exercises/[0-9][0-9][0-9].php');
   natcasesort($files);
 
   // anna vajalikud muutujad kaasa vaatele
@@ -18,7 +18,7 @@ public function list($userEmail) {
 
   public function show($id) {
     $filename = __DIR__ . '/../exercises/' . basename($id) . '.php';
-    if (preg_match('/^\\d{2}$/', $id) && file_exists($filename)) {
+    if (preg_match('/^\\d{3}$/', $id) && file_exists($filename)) {
       echo "<h2>Ülesanne $id</h2>";
       include $filename;
     } else {

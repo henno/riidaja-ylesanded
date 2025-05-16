@@ -18,7 +18,14 @@
   }
 </style>
 
-<p>Kopeeri igasse tekstikasti täpselt see sama sõna, mis on vasakul. Kui kõik sõnad on õigesti sisestatud, mõõdetakse aeg. Sul on aega 3 minutit (180 sekundit).</p>
+<p>Kopeeri igasse tekstikasti täpselt see sama sõna, mis on vasakul. Kui kõik sõnad on õigesti sisestatud, mõõdetakse aeg. 
+Sul on aega <?php 
+  require_once __DIR__ . '/../models/ResultsModel.php';
+  $model = new ResultsModel();
+  $exercise = $model->getExercise('001');
+  echo $exercise ? (int)$exercise['target_time'] : 85; 
+?> sekundit.
+</p>
 <form id="task-form">
   <table id="word-table">
     <thead>
@@ -78,7 +85,7 @@ function handleInput() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         elapsed: elapsed.toFixed(2),
-        exercise_id: '<?php echo htmlspecialchars($_GET["task"] ?? "01"); ?>'
+        exercise_id: '<?php echo htmlspecialchars($_GET["task"] ?? "001"); ?>'
       })
     });
   }
@@ -87,7 +94,13 @@ function handleInput() {
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-  if (elapsed >= 180) {
+   if (elapsed >= <?php 
+    // Get target time from database
+    require_once __DIR__ . '/../models/ResultsModel.php';
+    $model = new ResultsModel();
+    $exercise = $model->getExercise('001');
+    echo $exercise ? $exercise['target_time'] : 85; 
+  ?>) {
     clearInterval(timerInterval);
     alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
     location.reload();

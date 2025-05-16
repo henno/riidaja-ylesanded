@@ -11,3 +11,9 @@ CREATE TABLE IF NOT EXISTS "results" (
   elapsed REAL, 
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE exercises (
+  id TEXT PRIMARY KEY,
+  title TEXT,
+  target_time REAL,
+  description TEXT
+);
