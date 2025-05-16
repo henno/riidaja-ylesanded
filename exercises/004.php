@@ -71,6 +71,9 @@
   #text-correction-table td {
     height: 500px;
   }
+  .correction {
+    padding: 0px !important;
+  }
 </style>
 
 <p>Parandage parempoolses tekstikastis olev tekst, et see vastaks vasakpoolsele originaaltekstile. Tekst sisaldab mitmeid vigu, mida tuleb parandada. Kui tekst on õigesti parandatud, muutub tekstikasti taust roheliseks. Sul on aega 120 sekundit.</p>
@@ -83,7 +86,7 @@
       <tr>
         <td>1</td>
         <td><div id="original-text" class="original-text"></div></td>
-        <td><textarea id="correction-textarea" class="incorrect"></textarea></td>
+        <td class="correction"><textarea id="correction-textarea" class="incorrect"></textarea></td>
       </tr>
     </tbody>
   </table>
