@@ -1,6 +1,7 @@
 {
   "require": {
     "thenetworg/oauth2-azure": "^2.0",
-    "microsoft/microsoft-graph": "^1.100"
+    "microsoft/microsoft-graph": "^1.100",
+    "ext-pdo": "*"
   }
 }
