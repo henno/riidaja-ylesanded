@@ -254,46 +254,41 @@ function handleInput() {
 
 correctionTextarea.addEventListener('input', handleInput);
 
-// Disable mouse selection completely while allowing cursor positioning
+// Simple solution: only prevent mouse selection, allow keyboard selection
+let mouseIsDown = false;
 let lastClickPos = 0;
 
+// Track mouse state
 correctionTextarea.addEventListener('mousedown', function(e) {
-  // Store the cursor position on mouse down
+  mouseIsDown = true;
   lastClickPos = this.selectionStart;
 });
 
+correctionTextarea.addEventListener('mouseup', function() {
+  mouseIsDown = false;
+  // Clear any selection that happened with mouse
+  this.setSelectionRange(this.selectionStart, this.selectionStart);
+});
+
+// Prevent selection while dragging
 correctionTextarea.addEventListener('mousemove', function(e) {
-  if (e.buttons === 1) { // If mouse button is held down (dragging)
-    // Set cursor to the position from the mousedown event
-    // This prevents selection while allowing clicks to position cursor
+  if (mouseIsDown) {
     this.setSelectionRange(lastClickPos, lastClickPos);
-    return false;
   }
 });
 
 // Prevent double-click selection
 correctionTextarea.addEventListener('dblclick', function(e) {
   e.preventDefault();
-  return false;
-});
-
-// Prevent selection on mouseup
-correctionTextarea.addEventListener('mouseup', function() {
+  // Clear any selection
   this.setSelectionRange(this.selectionStart, this.selectionStart);
-});
-
-// Prevent copy/paste/cut context menu
-correctionTextarea.addEventListener('contextmenu', function(e) {
-  e.preventDefault();
   return false;
 });
 
-// Additional measure: constantly check for selection
-setInterval(function() {
-  if (correctionTextarea.selectionStart !== correctionTextarea.selectionEnd) {
-    correctionTextarea.setSelectionRange(correctionTextarea.selectionStart, correctionTextarea.selectionStart);
-  }
-}, 100);
+// Remove global document listeners when leaving textarea
+document.addEventListener('mouseup', function() {
+  mouseIsDown = false;
+});
 
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
