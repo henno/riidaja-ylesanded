@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Note**: This project can be run with Docker for easy setup and development. See the README.md file for more details on using the Docker environment.
+
 ## Project Overview
 
 Riidaja Ülesanded is a web application for student exercises. It provides a platform where students can complete timed tasks and view their results.
@@ -11,21 +13,22 @@ Riidaja Ülesanded is a web application for student exercises. It provides a pla
 ### Database Setup
 
 ```bash
-# Create a new SQLite database file
-touch database.db
-
-# Initialize or update the database schema
+# The database is automatically created and initialized when the application is first accessed
+# You can manually run the migration script if needed
 php migrate.php
 ```
 
 ### Installation
 
 ```bash
-# Install dependencies
+# Install dependencies (use the PHP script when working with Docker)
+./php.sh composer install
+# Or if not using Docker:
 composer install
 
-# Copy sample configuration file
-cp config.sample.php config.php
+# Configuration files are created automatically from config.sample.php
+# You only need to manually copy if you want to edit settings:
+# cp config.sample.php config.php
 ```
 
 ## Architecture
@@ -34,6 +37,7 @@ cp config.sample.php config.php
 
 2. **Database**: 
    - SQLite database with migrations system
+   - Database is automatically created and initialized when application is first accessed
    - Migrations are tracked in the `migrations` table
    - Main tables: `results`, `exercises`, `migrations`
 
@@ -47,6 +51,8 @@ cp config.sample.php config.php
    - Each exercise file contains HTML, CSS, and JavaScript for a specific task
    - Tasks are timed and results are saved to the database
    - Target times can be configured in the database
+   - New exercises are automatically detected and registered in the database
+   - Exercise metadata (target time, description) is automatically extracted from exercise files
 
 5. **Results Management**:
    - Results are stored with user information, exercise ID, and elapsed time
@@ -58,5 +64,7 @@ cp config.sample.php config.php
 - **index.php**: Main application entry point, handles authentication and routing
 - **save_result.php**: API endpoint to save exercise results
 - **migrate.php**: Database migration script
+- **models/Database.php**: Database connection and schema management
 - **models/ResultsModel.php**: Main model for handling exercise results
 - **exercises/**: Directory containing individual exercise PHP files
+- **php.sh**: Shell script for running the application with Docker
