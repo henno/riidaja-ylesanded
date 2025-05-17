@@ -7,6 +7,10 @@ require_once __DIR__ . '/models/Database.php';
 require_once __DIR__ . '/models/ResultsModel.php';
 require_once __DIR__ . '/controllers/TaskController.php';
 require_once __DIR__ . '/controllers/ResultsController.php';
+// Check if config.php exists, if not, create it from the sample
+if (!file_exists(__DIR__ . '/config.php') && file_exists(__DIR__ . '/config.sample.php')) {
+    copy(__DIR__ . '/config.sample.php', __DIR__ . '/config.php');
+}
 require 'config.php';
 
 use Microsoft\Graph\Graph;
