@@ -1,171 +1,175 @@
 <?php
-class Database {
-  private static $pdo = null;
 
-  public static function connect() {
-    if (self::$pdo === null) {
-      $dbPath = __DIR__ . '/../database.db';
+class Database
+{
+    private static ?PDO $pdo = null;
 
-      // Create PDO connection
-      self::$pdo = new PDO('sqlite:' . $dbPath);
-      self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    private const string DB_FILE_PATH = __DIR__ . '/../database.db';
+    private const string MIGRATIONS_GLOB_PATH = __DIR__ . '/../migrations/*.sql';
+    private const string EXERCISES_GLOB_PATH = __DIR__ . '/../exercises/[0-9][0-9][0-9].php';
 
-      // Check if required tables exist
-      self::ensureTablesExist();
+    private const string TABLE_MIGRATIONS = 'migrations';
+    private const string TABLE_EXERCISES = 'exercises';
+    // private const TABLE_RESULTS = 'results'; // If 'results' is created by a migration
+
+    private const int DEFAULT_TARGET_TIME = 60;
+    private const int DESCRIPTION_MAX_LENGTH = 100;
+    private const string DESCRIPTION_TRUNCATE_SUFFIX = '...';
+
+    public static function connect(): PDO
+    {
+        if (self::$pdo === null) {
+            self::$pdo = new PDO('sqlite:' . self::DB_FILE_PATH);
+            self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            self::initializeSchemaAndData();
+        }
+        return self::$pdo;
     }
-    return self::$pdo;
-  }
-
-  /**
-   * Ensure that all required tables exist
-   */
-  private static function ensureTablesExist() {
-    try {
-      // Try to query the results table
-      self::$pdo->query("SELECT 1 FROM results LIMIT 1");
-    } catch (Exception $e) {
-      // If the table doesn't exist, create and migrate the database
-      self::createAndMigrateDatabase();
-    }
-  }
 
     /**
-     * Create and migrate the database if it doesn't exist
-     * @throws Exception
+     * Ensures the database schema is up to date by creating the necessary tables
+     * and applying migrations and updating exercise data.
      */
-  private static function createAndMigrateDatabase() {
-    // Create a migration table
-    self::$pdo->exec('
-      CREATE TABLE IF NOT EXISTS migrations (
-        id INTEGER PRIMARY KEY,
-        migration TEXT,
-        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    ');
+    private static function initializeSchemaAndData(): void
+    {
+        // 1. Create a migration table if it doesn't exist
+        self::$pdo->exec('
+            CREATE TABLE IF NOT EXISTS ' . self::TABLE_MIGRATIONS . ' (
+                id INTEGER PRIMARY KEY,
+                migration TEXT UNIQUE,
+                applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ');
 
-    // Apply migrations from migrations directory
-    $migrationFiles = glob(__DIR__ . '/../migrations/*.sql');
-    natcasesort($migrationFiles);
+        // 2. Apply pending migrations
+        self::applyMigrations();
 
-    // Apply each migration
-    foreach ($migrationFiles as $migrationFile) {
-      $migrationName = basename($migrationFile);
+        // 3. Sync exercises table from files (if the table exists - typically created by a migration)
+        self::syncExercisesTable();
+    }
 
-      // Check if migration already applied
-      $stmt = self::$pdo->prepare('SELECT 1 FROM migrations WHERE migration = ?');
-      $stmt->execute([$migrationName]);
-      if ($stmt->fetchColumn()) {
-        continue;
-      }
+    private static function tableExists(string $tableName): bool
+    {
+        try {
+            // Querying information_schema or specific system tables is more robust,
+            // but for SQLite, a simple query and catching the exception is common.
+            self::$pdo->query("SELECT 1 FROM {$tableName} LIMIT 1");
+            return true;
+        } catch (PDOException $e) {
+            // This will catch the "no such table" error.
+            return false;
+        }
+    }
 
-      try {
-        // Begin transaction
-        self::$pdo->beginTransaction();
+    private static function applyMigrations(): void
+    {
+        $migrationFiles = glob(self::MIGRATIONS_GLOB_PATH) ?: [];
+        natcasesort($migrationFiles);
 
-        // Read and execute migration SQL
-        $sql = file_get_contents($migrationFile);
-        self::$pdo->exec($sql);
+        foreach ($migrationFiles as $migrationFile) {
+            $migrationName = basename($migrationFile);
 
-        // Record the migration
-        $stmt = self::$pdo->prepare('INSERT INTO migrations (migration) VALUES (?)');
+            $stmt = self::$pdo->prepare('SELECT 1 FROM ' . self::TABLE_MIGRATIONS . ' WHERE migration = ?');
+            $stmt->execute([$migrationName]);
+            if ($stmt->fetchColumn()) {
+                continue; // Already applied
+            }
+
+            try {
+                self::$pdo->beginTransaction();
+                self::$pdo->exec(file_get_contents($migrationFile));
+                self::recordMigration($migrationName);
+                self::$pdo->commit();
+            } catch (Exception $e) {
+                self::$pdo->rollBack();
+                error_log("Failed to apply migration {$migrationName}: " . $e->getMessage());
+                throw $e; // Re-throw to halt further operations or inform the caller
+            }
+        }
+    }
+
+    private static function recordMigration(string $migrationName): void
+    {
+        $stmt = self::$pdo->prepare('INSERT INTO ' . self::TABLE_MIGRATIONS . ' (migration) VALUES (?)');
         $stmt->execute([$migrationName]);
-
-        // Commit transaction
-        self::$pdo->commit();
-      } catch (Exception $e) {
-        // Rollback transaction on error
-        self::$pdo->rollBack();
-        throw $e;
-      }
     }
 
-    // Update exercises table with information from exercise files
-    self::updateExercisesTable();
-  }
+    private static function syncExercisesTable(): void
+    {
+        if (!self::tableExists(self::TABLE_EXERCISES)) {
+            // If the exercise table doesn't exist (e.g., migration hasn't run), skip syncing.
+            return;
+        }
 
-  /**
-   * Update exercises table with information from exercise files
-   */
-  private static function updateExercisesTable() {
-    // Make sure the exercise table exists
-    try {
-      self::$pdo->query("SELECT 1 FROM exercises LIMIT 1");
-    } catch (Exception $e) {
-      // Table doesn't exist yet, which is fine if the migration hasn't created it
-      return;
+        $exerciseFiles = self::getExerciseFiles();
+        foreach ($exerciseFiles as $exerciseFile) {
+            $exerciseData = self::processExerciseFile($exerciseFile);
+            self::saveExercise($exerciseData);
+        }
     }
 
-    // Get existing exercises from database
-    $existingExercises = self::$pdo->query("SELECT id FROM exercises")->fetchAll(PDO::FETCH_COLUMN);
-
-    // Get all exercise files
-    $exerciseFiles = glob(__DIR__ . '/../exercises/[0-9][0-9][0-9].php');
-    natcasesort($exerciseFiles);
-
-    // Process each exercise file
-    foreach ($exerciseFiles as $exerciseFile) {
-      $exerciseId = basename($exerciseFile, '.php');
-      $targetTime = self::extractTargetTime($exerciseFile);
-      $description = self::extractDescription($exerciseFile);
-
-      // Generate a title based on the exercise ID
-      $title = "Ülesanne " . $exerciseId;
-
-      // Check if this exercise already exists in the database
-      if (in_array($exerciseId, $existingExercises)) {
-        // Update existing exercise
-        $stmt = self::$pdo->prepare("UPDATE exercises SET title = ?, target_time = ?, description = ? WHERE id = ?");
-        $stmt->execute([$title, $targetTime, $description, $exerciseId]);
-      } else {
-        // Insert new exercise
-        $stmt = self::$pdo->prepare("INSERT INTO exercises (id, title, target_time, description) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$exerciseId, $title, $targetTime, $description]);
-      }
-    }
-  }
-
-  /**
-   * Extract target time from an exercise file
-   */
-  private static function extractTargetTime($filePath) {
-    $content = file_get_contents($filePath);
-    // Default target time if isn't specified
-    $targetTime = 60;
-
-    // Look for target time in the file
-    // Pattern 1: Specific value assignment (most exercises)
-    if (preg_match('/elapsed >= (\d+)/', $content, $matches)) {
-      $targetTime = $matches[1];
-    }
-    // Pattern 2: Direct reference to time in seconds
-    elseif (preg_match('/aega (\d+) sekundit/', $content, $matches)) {
-      $targetTime = $matches[1];
+    private static function getExerciseFiles(): array
+    {
+        $files = glob(self::EXERCISES_GLOB_PATH) ?: [];
+        natcasesort($files);
+        return $files;
     }
 
-    return $targetTime;
-  }
-
-  /**
-   * Extract a simple description from an exercise file
-   */
-  private static function extractDescription($filePath) {
-    $content = file_get_contents($filePath);
-
-    // Try to find the task description in a <p> tag
-    if (preg_match('/<p>(.*?)<\/p>/s', $content, $matches)) {
-      // Extract the first 100 characters of the description and clean it up
-      $description = strip_tags($matches[1]);
-      $description = trim(preg_replace('/\s+/', ' ', $description));
-
-      // Limit to 100 characters and add ellipsis if needed
-      if (strlen($description) > 100) {
-        $description = substr($description, 0, 97) . '...';
-      }
-
-      return $description;
+    private static function processExerciseFile(string $filePath): array
+    {
+        $exerciseId = basename($filePath, '.php');
+        return [
+            'id' => $exerciseId,
+            'title' => "Ülesanne " . $exerciseId, // Consider if this should be configurable
+            'target_time' => self::extractTargetTimeFromFile($filePath),
+            'description' => self::extractDescriptionFromFile($filePath, $exerciseId)
+        ];
     }
 
-    // Default description if not found
-    return "Exercise " . basename($filePath, '.php');
-  }
+    private static function saveExercise(array $exercise): void
+    {
+        $sql = '
+            INSERT INTO ' . self::TABLE_EXERCISES . ' (id, title, target_time, description)
+            VALUES (:id, :title, :target_time, :description)
+            ON CONFLICT(id) DO UPDATE SET
+                title = excluded.title,
+                target_time = excluded.target_time,
+                description = excluded.description
+        ';
+        $stmt = self::$pdo->prepare($sql);
+        $stmt->execute([
+            ':id' => $exercise['id'],
+            ':title' => $exercise['title'],
+            ':target_time' => $exercise['target_time'],
+            ':description' => $exercise['description'],
+        ]);
+    }
+
+    private static function extractTargetTimeFromFile(string $filePath): int
+    {
+        $content = file_get_contents($filePath);
+        $targetTime = self::DEFAULT_TARGET_TIME;
+
+        if (preg_match('/elapsed >= (\d+)/', $content, $matches) ||
+            preg_match('/aega (\d+) sekundit/', $content, $matches)) {
+            $targetTime = (int)$matches[1];
+        }
+        return $targetTime;
+    }
+
+    private static function extractDescriptionFromFile(string $filePath, string $exerciseId): string
+    {
+        $content = file_get_contents($filePath);
+
+        if (preg_match('/<p>(.*?)<\/p>/s', $content, $matches)) {
+            $description = strip_tags($matches[1]);
+            $description = trim(preg_replace('/\s+/', ' ', $description));
+
+            if (mb_strlen($description) > self::DESCRIPTION_MAX_LENGTH) {
+                $description = mb_substr($description, 0, self::DESCRIPTION_MAX_LENGTH - mb_strlen(self::DESCRIPTION_TRUNCATE_SUFFIX)) . self::DESCRIPTION_TRUNCATE_SUFFIX;
+            }
+            return $description;
+        }
+        return "Exercise " . $exerciseId; // Default description
+    }
 }
