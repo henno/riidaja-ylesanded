@@ -11,10 +11,15 @@ function composer() {
     -v $(pwd):/app \
     -v ${COMPOSER_HOME:-$HOME/.composer}:/tmp/composer \
     -w /app \
-    composer:latest "$@"
+    --entrypoint sh \
+    composer:latest -c "git config --global --add safe.directory /app && composer $*"
 }
 
 function start() {
+  # Run composer install to ensure dependencies are up to date
+  echo "Running composer install..."
+  composer install
+
   # Build and run in one command
   echo "Building and starting PHP server..."
   docker build -t "$IMAGE_NAME" .
