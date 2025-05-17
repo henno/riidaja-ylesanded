@@ -48,19 +48,19 @@
       $id = basename($filePath, '.php');
 
       $myBest = $resultsModel->getUserBest($userEmail, $id);
-      $myBestFormatted = $myBest ? number_format($myBest, 2) . ' s' : '-';
+      $myBestFormatted = ($myBest !== null && $myBest !== false) ? number_format($myBest, 2) . ' s' : '-';
 
       $best = $resultsModel->getGlobalBest($id);
-      $bestFormatted = $best
+      $bestFormatted = ($best && isset($best['elapsed']) && $best['elapsed'] !== null)
         ? number_format($best['elapsed'], 2) . ' s (' . htmlspecialchars($best['name']) . ')'
         : '-';
 
       $avg = $resultsModel->getAverage($id);
-      $avgFormatted = $avg ? number_format($avg, 2) . ' s' : '-';
+      $avgFormatted = ($avg !== null && $avg !== false) ? number_format($avg, 2) . ' s' : '-';
 
       // Get exercise info
       $exercise = $resultsModel->getExercise($id);
-      $targetFormatted = $exercise && $exercise['target_time'] 
+      $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null) 
         ? number_format($exercise['target_time'], 2) . ' s' 
         : '-';
 

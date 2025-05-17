@@ -13,7 +13,7 @@ The easiest way to get started is using Docker, which sets up PHP with SQLite su
 
 1. **Start the server**
    ```bash
-   ./php_server.sh start
+   ./php.sh start
    ```
    This will build the Docker image and start the PHP development server at http://localhost:8000
 
@@ -31,18 +31,18 @@ The easiest way to get started is using Docker, which sets up PHP with SQLite su
 
 4. **Stopping the server**
    ```bash
-   ./php_server.sh stop
+   ./php.sh stop
    ```
 
 5. **Restart the server**
    ```bash
-   ./php_server.sh restart
+   ./php.sh restart
    ```
 
 6. **Run Composer commands**
    ```bash
-   ./php_server.sh composer install
-   ./php_server.sh composer require vendor/package
+   ./php.sh composer install
+   ./php.sh composer require vendor/package
    ```
 
 ### Docker Details
