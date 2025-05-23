@@ -100,7 +100,7 @@ if ($exerciseFilter) {
       if (!$hasAttempts) {
         // Display a message for exercises with no attempts
         echo '<table>';
-        echo '<thead><tr><th>Õpilane</th><th>Tulemusi</th><th>Parim Tulemus</th>';
+        echo '<thead><tr><th>Õpilane</th><th>Tulemusi</th><th data-bs-toggle="tooltip" data-bs-placement="top" title="Õpilase parim tulemus (kõikide õpilaste keskmine tulemus)">Parim Tulemus</th>';
         if ($isAdmin) echo '<th></th>';
         echo '</tr></thead>';
         echo '<tbody><tr><td colspan="' . ($isAdmin ? '4' : '3') . '" class="no-attempt">Keegi pole seda harjutust veel teinud</td></tr></tbody>';
@@ -160,7 +160,7 @@ if ($exerciseFilter) {
           <tr>
             <th>Õpilane</th>
             <th>Tulemusi</th>
-            <th>Parim Tulemus</th>
+            <th data-bs-toggle="tooltip" data-bs-placement="top" title="Õpilase parim tulemus (kõikide õpilaste keskmine tulemus)">Parim Tulemus</th>
             <?php if ($isAdmin): ?>
               <th></th>
             <?php endif; ?>
@@ -194,7 +194,7 @@ if ($exerciseFilter) {
                 }
 
                 $classAttr = ' class="' . implode(' ', $classes) . '"';
-                echo "<td{$classAttr}>" . round($bestAttempt) . " s (" . round($globalAverages[$exerciseId]) . " s)" . $crownSymbol . "</td>";
+                echo "<td{$classAttr} data-bs-toggle=\"tooltip\" data-bs-placement=\"top\" title=\"" . htmlspecialchars($result['name']) . " parim tulemus (kõikide õpilaste keskmine tulemus)\">" . round($bestAttempt) . " s (" . round($globalAverages[$exerciseId]) . " s)" . $crownSymbol . "</td>";
               } else {
                 echo "<td class=\"{$completionClass}\">-</td>";
               }
@@ -228,7 +228,7 @@ if ($exerciseFilter) {
           <tr>
             <th>Harjutus</th>
             <th>Tulemusi</th>
-            <th>Parim Tulemus</th>
+            <th data-bs-toggle="tooltip" data-bs-placement="top" title="Õpilase parim tulemus (kõikide õpilaste keskmine tulemus)">Parim Tulemus (keskmine)</th>
             <?php if ($isAdmin): ?>
               <th></th>
             <?php endif; ?>
@@ -263,7 +263,7 @@ if ($exerciseFilter) {
                 $exerciseId = $exercise['exercise_id'];
                 $globalAverage = isset($globalAverages[$exerciseId]) ? $globalAverages[$exerciseId] : null;
 
-                echo '<td class="' . $completionClass . '">';
+                echo '<td class="' . $completionClass . '" data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars($student['name']) . ' parim tulemus (kõikide õpilaste keskmine tulemus)">';
                 echo round($bestResult) . ' s';
                 if ($globalAverage !== null) {
                   echo ' (' . round($globalAverage) . ' s)';
@@ -432,5 +432,11 @@ if ($exerciseFilter) {
       document.querySelectorAll('th').forEach(th => th.removeAttribute('data-sort-order'));
       header.dataset.sortOrder = ascending ? 'asc' : 'desc';
     });
+  });
+
+  // Initialize Bootstrap tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
   });
 </script>

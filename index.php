@@ -134,6 +134,9 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="Thu, 01 Jan 1970 00:00:00 GMT">
   <title>Õpilaste Ülesanded</title>
+  <!-- Bootstrap CSS and JS with Popper.js -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
     // Clean up URL in browser address bar if it contains authentication parameters
     if (window.location.href.includes('code=') || window.location.href.includes('state=') || window.location.href.includes('session_state=')) {
