@@ -4,17 +4,17 @@ class Database
 {
     private static ?PDO $pdo = null;
 
-    private const string DB_FILE_PATH = __DIR__ . '/../database.db';
-    private const string MIGRATIONS_GLOB_PATH = __DIR__ . '/../migrations/*.sql';
-    private const string EXERCISES_GLOB_PATH = __DIR__ . '/../exercises/[0-9][0-9][0-9].php';
+    private const DB_FILE_PATH = __DIR__ . '/../database.db';
+    private const MIGRATIONS_GLOB_PATH = __DIR__ . '/../migrations/*.sql';
+    private const EXERCISES_GLOB_PATH = __DIR__ . '/../exercises/[0-9][0-9][0-9].php';
 
-    private const string TABLE_MIGRATIONS = 'migrations';
-    private const string TABLE_EXERCISES = 'exercises';
+    private const TABLE_MIGRATIONS = 'migrations';
+    private const TABLE_EXERCISES = 'exercises';
     // private const TABLE_RESULTS = 'results'; // If 'results' is created by a migration
 
-    private const int DEFAULT_TARGET_TIME = 60;
-    private const int DESCRIPTION_MAX_LENGTH = 100;
-    private const string DESCRIPTION_TRUNCATE_SUFFIX = '...';
+    private const DEFAULT_TARGET_TIME = 60;
+    private const DESCRIPTION_MAX_LENGTH = 100;
+    private const DESCRIPTION_TRUNCATE_SUFFIX = '...';
 
     public static function connect(): PDO
     {
