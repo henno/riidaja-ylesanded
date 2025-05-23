@@ -1,91 +1,91 @@
-<style>
-    #text-correction-table {
-        width: 100%;
-        max-width: 1250px;
-        margin: 20px auto;
-        border-collapse: collapse;
-    }
-    #text-correction-table th, #text-correction-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        vertical-align: top;
-    }
-    #text-correction-table th:first-child {
-        width: 40px;
-    }
-    #text-correction-table th:nth-child(2),
-    #text-correction-table th:nth-child(3) {
-        width: 50%;
-    }
-    #text-correction-table th {
-        background-color: #f2f2f2;
-    }
-    #text-correction-table td {
-        position: relative;
-    }
-    textarea {
-        width: 100%;
-        height: 100%;
-        border: none;
-        resize: none;
-        padding: 8px;
-        box-sizing: border-box;
-        font-family: monospace;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-    .correct {
-        background-color: #ccffcc;
-    }
-    .incorrect {
-        background-color: #ffcccc;
-    }
-    .original-text {
-        white-space: pre-wrap;
-        font-family: monospace;
-        font-size: 14px;
-        line-height: 1.5;
-        text-align: left;
-        height: 100%;
-        overflow: hidden;
-        user-select: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-        pointer-events: none;
-    }
-    .diff-highlight {
-        background-color: #ffff99;
-    }
-    #progress-bar {
-        width: 100%;
-        background-color: #e0e0e0;
-        margin: 10px 0;
-        height: 20px;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    #progress-bar-inner {
-        height: 100%;
-        background-color: #4caf50;
-        width: 0%;
-        transition: width 0.2s;
-    }
-    #text-correction-table td {
-        height: 500px;
-    }
-    .correction {
-        padding: 0px !important;
-    }
-    .correct-char {
-        background-color: #ccffcc;
-    }
-    .incorrect-char {
-        background-color: #ffcccc;
-    }
-</style>
 
-<p>Paranda parempoolses tekstikastis olev tekst, et see vastaks vasakpoolsele originaaltekstile. Vigu näidatakse punase/rohelise värviga. Sul on aega 60 sekundit.</p>
+    <style>
+        #text-correction-table {
+            width: 100%;
+            max-width: 1250px;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        #text-correction-table th, #text-correction-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            vertical-align: top;
+        }
+        #text-correction-table th:first-child {
+            width: 40px;
+        }
+        #text-correction-table th:nth-child(2),
+        #text-correction-table th:nth-child(3) {
+            width: 50%;
+        }
+        #text-correction-table th {
+            background-color: #f2f2f2;
+        }
+        #text-correction-table td {
+            position: relative;
+            height: 500px;
+        }
+        textarea {
+            width: 100%;
+            height: 100%;
+            border: none;
+            resize: none;
+            padding: 8px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .correct {
+            background-color: #ccffcc;
+        }
+        .incorrect {
+            background-color: #ffcccc;
+        }
+        .original-text {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: left;
+            height: 100%;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            pointer-events: none;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .correction {
+            padding: 0px !important;
+        }
+        .correct-text {
+            background-color: #ccffcc;
+        }
+        .first-error {
+            background-color: #ffcccc;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { background-color: #ffcccc; }
+            50% { background-color: #ff9999; }
+            100% { background-color: #ffcccc; }
+        }
+        #progress-info {
+            margin: 10px auto;
+            max-width: 1250px;
+            font-family: monospace;
+        }
+        #timer {
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+
+<p>Paranda parempoolses tekstikastis olev tekst, et see vastaks vasakpoolsele originaaltekstile. Esimest viga näidatakse punase värviga. Sul on aega 60 sekundit.</p>
+
 <form id="task-form">
     <table id="text-correction-table">
         <thead>
@@ -99,17 +99,25 @@
         </tr>
         </tbody>
     </table>
-    <div id="timer">Kulunud aeg: 0.00 s</div>
+    <div id="progress-info">
+        <div id="timer">Kulunud aeg: 0.00 s</div>
+        <div id="progress">Õigeid märke: 0/0 (0%)</div>
+    </div>
 </form>
 
 <script>
-    const originalTextDiv    = document.getElementById('original-text');
+    const originalTextDiv = document.getElementById('original-text');
     const correctionTextarea = document.getElementById('correction-textarea');
-    const timerDisplay       = document.getElementById('timer');
-    let startTime   = null;
-    let timerInterval = null;
+    const timerDisplay = document.getElementById('timer');
+    const progressDisplay = document.getElementById('progress');
 
-    // Tekstide komplekt
+    let startTime = null;
+    let timerInterval = null;
+    let originalText = '';
+    let lastFirstErrorPos = -1;
+    let debounceTimeout = null;
+
+    // Text sets
     const textSets = [
         {
             original: `8.2 Iteratsiooni Lõpetamine (Nädala lõpus)
@@ -205,94 +213,148 @@ Kuna Anna aktsepteeris valminud funktsionaalsuse ja see moodustab osa kokkulepit
         }
     ];
 
-    // Valib juhusliku tekstikomplekti
-    const randomIndex  = Math.floor(Math.random() * textSets.length);
-    const selectedText = textSets[randomIndex];
+    // Initialize
+    function initializeExercise() {
+        const randomIndex = Math.floor(Math.random() * textSets.length);
+        const selectedText = textSets[randomIndex];
 
-    // Kuvab originaalteksti ja muudetud/vigadega teksti
-    highlightDiff(selectedText.original, selectedText.corrupted);
-    correctionTextarea.value          = selectedText.corrupted;
-    correctionTextarea.dataset.original = selectedText.original;
+        originalText = selectedText.original;
+        correctionTextarea.value = selectedText.corrupted;
+        correctionTextarea.dataset.original = originalText;
 
-    // Funktsioon tekstide võrdlemiseks ja sarnasuse arvutamiseks
-    function compareTexts(original, current) {
-        let sameChars = 0;
-        const originalLength = original.length;
-
-        for (let i = 0; i < originalLength; i++) {
-            if (i < current.length && original[i] === current[i]) {
-                sameChars++;
-            }
-        }
-
-        // Arvutame sarnasusskoori
-        const similarityScore = Math.floor((sameChars / originalLength) * 100);
-        return similarityScore;
+        // Initial display setup
+        updateDisplay(selectedText.corrupted);
     }
 
-    // Funktsioon HTML-erimärkide vältimiseks
-    function escapeHtmlChar(char) {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-        return map[char] || char;
-    }
+    // Optimized function to find first difference and update display
+    function updateDisplay(currentText) {
+        let firstErrorPos = -1;
+        let correctChars = 0;
 
-    // Funktsioon, mis toob esile erinevused originaal- ja sisestatud teksti vahel
-    function highlightDiff(original, current) {
-        let html = '';
-        for (let i = 0; i < original.length; i++) {
-            const oChar   = original[i];
-            const safeChar = oChar === '\n' ? '<br>' : escapeHtmlChar(oChar);
-            if (i < current.length) {
-                if (oChar === current[i]) {
-                    html += `<span class="correct-char">${safeChar}</span>`;
-                } else {
-                    html += `<span class="incorrect-char">${safeChar}</span>`;
-                }
+        // Find first difference position
+        const minLength = Math.min(originalText.length, currentText.length);
+        for (let i = 0; i < minLength; i++) {
+            if (originalText[i] === currentText[i]) {
+                correctChars++;
             } else {
-                html += safeChar;
+                firstErrorPos = i;
+                break;
             }
         }
-        originalTextDiv.innerHTML = html;
+
+        // If all compared characters match but lengths differ
+        if (firstErrorPos === -1 && originalText.length !== currentText.length) {
+            firstErrorPos = minLength;
+            correctChars = minLength;
+        }
+
+        // Only update DOM if the first error position changed
+        if (firstErrorPos !== lastFirstErrorPos) {
+            updateOriginalTextDisplay(firstErrorPos);
+            lastFirstErrorPos = firstErrorPos;
+        }
+
+        // Update progress
+        const totalChars = originalText.length;
+        const progressPercent = Math.floor((correctChars / totalChars) * 100);
+        progressDisplay.textContent = `Õigeid märke: ${correctChars}/${totalChars} (${progressPercent}%)`;
+
+        return firstErrorPos === -1 && currentText.length === originalText.length;
     }
 
+    // Efficiently update the original text display
+    function updateOriginalTextDisplay(firstErrorPos) {
+        if (firstErrorPos === -1) {
+            // All text is correct
+            originalTextDiv.innerHTML = `<span class="correct-text">${escapeHtml(originalText)}</span>`;
+        } else {
+            const correctPart = originalText.substring(0, firstErrorPos);
+            const errorChar = originalText[firstErrorPos] || '';
+            const remainingPart = originalText.substring(firstErrorPos + 1);
+
+            let html = '';
+            if (correctPart) {
+                html += `<span class="correct-text">${escapeHtml(correctPart)}</span>`;
+            }
+            if (errorChar) {
+                html += `<span class="first-error">${escapeHtml(errorChar)}</span>`;
+            }
+            if (remainingPart) {
+                html += escapeHtml(remainingPart);
+            }
+
+            originalTextDiv.innerHTML = html;
+        }
+    }
+
+    // Optimized HTML escaping
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;')
+            .replace(/\n/g, '<br>');
+    }
+
+    // Debounced input handler
     function handleInput() {
+        // Start timer on first input
         if (startTime === null) {
-            startTime   = Date.now();
+            startTime = Date.now();
             timerInterval = setInterval(updateTimer, 50);
         }
 
-        const originalText = correctionTextarea.dataset.original;
-        const currentText  = correctionTextarea.value;
-        highlightDiff(originalText, currentText);
+        // Clear previous debounce
+        if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+        }
 
-        if (currentText === originalText) {
-            correctionTextarea.classList.remove('incorrect');
-            correctionTextarea.classList.add('correct');
+        // Debounce the expensive operations
+        debounceTimeout = setTimeout(() => {
+            const currentText = correctionTextarea.value;
+            const isComplete = updateDisplay(currentText);
 
+            if (isComplete) {
+                correctionTextarea.classList.remove('incorrect');
+                correctionTextarea.classList.add('correct');
+
+                clearInterval(timerInterval);
+                const elapsed = (Date.now() - startTime) / 1000;
+                timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
+
+                fetch('save_result.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        elapsed: elapsed.toFixed(2),
+                        exercise_id: '004'
+                    })
+                });
+
+            } else {
+                correctionTextarea.classList.remove('correct');
+                correctionTextarea.classList.add('incorrect');
+            }
+        }, 16); // ~60fps debouncing
+    }
+
+    // Timer function
+    function updateTimer() {
+        const elapsed = (Date.now() - startTime) / 1000;
+        timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
+        if (elapsed >= 60) {
             clearInterval(timerInterval);
-            const elapsed = (Date.now() - startTime) / 1000;
-            timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-            fetch('save_result.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    elapsed: elapsed.toFixed(2),
-                    exercise_id: '<?php echo htmlspecialchars($_GET["task"] ?? "004"); ?>'
-                })
-            });
-        } else {
-            correctionTextarea.classList.remove('correct');
-            correctionTextarea.classList.add('incorrect');
+            alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
+            location.reload();
         }
     }
 
-    correctionTextarea.addEventListener('input', handleInput);
-
-    // Simple solution: only prevent mouse selection, allow keyboard selection
+    // Mouse selection prevention (kept from original)
     let mouseIsDown = false;
     let lastClickPos = 0;
 
-    // Track mouse state
     correctionTextarea.addEventListener('mousedown', function(event) {
         if (event.button === 0) {
             mouseIsDown = true;
@@ -305,23 +367,18 @@ Kuna Anna aktsepteeris valminud funktsionaalsuse ja see moodustab osa kokkulepit
             event.preventDefault();
             const currentPos = correctionTextarea.selectionStart;
             const diff = currentPos - lastClickPos;
-            correctionTextarea.scrollLeft -= diff * 8; // Adjust this factor if needed
+            correctionTextarea.scrollLeft -= diff * 8;
             lastClickPos = currentPos;
         }
     });
 
-    // Remove global document listeners when leaving textarea
     document.addEventListener('mouseup', function() {
         mouseIsDown = false;
     });
 
-    function updateTimer() {
-        const elapsed = (Date.now() - startTime) / 1000;
-        timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-        if (elapsed >= 60) {
-            clearInterval(timerInterval);
-            alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
-            location.reload();
-        }
-    }
+    // Event listeners
+    correctionTextarea.addEventListener('input', handleInput);
+
+    // Initialize the exercise
+    initializeExercise();
 </script>
