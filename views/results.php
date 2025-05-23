@@ -1,13 +1,16 @@
 <?php
+// Get the active tab from the URL or default to 'harjutused'
+$activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'harjutused';
+
 if ($emailFilter && $exerciseFilter) {
   echo "<h2>Tulemused – " . htmlspecialchars($emailFilter) . " – Ülesanne " . htmlspecialchars($exerciseFilter) . "</h2>";
-  echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
+  echo "<p><a href=\"?page=results&tab=" . htmlspecialchars($activeTab) . "\">« Kõik tulemused</a></p>";
 } elseif ($emailFilter) {
   echo "<h2>Tulemused – " . htmlspecialchars($emailFilter) . "</h2>";
-  echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
+  echo "<p><a href=\"?page=results&tab=" . htmlspecialchars($activeTab) . "\">« Kõik tulemused</a></p>";
 } elseif ($exerciseFilter) {
   echo "<h2>Tulemused – Ülesanne " . htmlspecialchars($exerciseFilter) . "</h2>";
-  echo "<p><a href=\"?page=results\">« Kõik tulemused</a></p>";
+  echo "<p><a href=\"?page=results&tab=" . htmlspecialchars($activeTab) . "\">« Kõik tulemused</a></p>";
 } else {
   echo "<h2>Kõik tulemused</h2>";
 }
@@ -50,6 +53,9 @@ if ($emailFilter && $exerciseFilter) {
   document.getElementById('summary-toggle').addEventListener('change', function() {
     const url = new URL(window.location.href);
     url.searchParams.set('summary', this.checked ? '1' : '0');
+    // Preserve the tab parameter
+    const activeTab = url.searchParams.get('tab') || 'harjutused';
+    url.searchParams.set('tab', activeTab);
     window.location.href = url.toString();
   });
 

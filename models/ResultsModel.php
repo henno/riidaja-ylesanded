@@ -102,10 +102,12 @@ class ResultsModel {
   }
 
   public function getSummaryResults() {
-    $exercises = $this->getAllExercises();
+    // Get all exercises from the exercises table
+    $allExercises = $this->getAllExercisesInfo();
     $results = [];
 
-    foreach ($exercises as $exerciseId) {
+    foreach ($allExercises as $exercise) {
+      $exerciseId = $exercise['id'];
       // Format the exercise ID with leading zero if needed
       $formattedExerciseId = sprintf('%02d', $exerciseId);
 
@@ -128,9 +130,8 @@ class ResultsModel {
       $stmt->execute([$exerciseId, $formattedExerciseId]);
       $exerciseResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-      if (!empty($exerciseResults)) {
-        $results[$exerciseId] = $exerciseResults;
-      }
+      // Always include the exercise in the results, even if no one has completed it
+      $results[$exerciseId] = $exerciseResults;
     }
 
     return $results;
@@ -166,7 +167,7 @@ class ResultsModel {
   public function getExercise($exerciseId) {
     // Handle both string ('001') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
-    
+
     $stmt = $this->db->prepare('
       SELECT id, title, target_time, description 
       FROM exercises 
@@ -185,5 +186,86 @@ class ResultsModel {
   public function getAllExercisesInfo() {
     $stmt = $this->db->query('SELECT id, title, target_time, description FROM exercises ORDER BY id');
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  /**
+   * Get summary results grouped by students
+   *
+   * @return array Array of results grouped by student email
+   */
+  public function getStudentSummaryResults() {
+    // Get all students
+    $stmt = $this->db->query('
+      SELECT DISTINCT r.email, r.name
+      FROM results r
+      ORDER BY r.name
+    ');
+    $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get all exercises
+    $allExercises = $this->getAllExercisesInfo();
+
+    $results = [];
+
+    // Initialize results structure for each student
+    foreach ($students as $student) {
+      $email = $student['email'];
+      $results[$email] = [
+        'name' => $student['name'],
+        'exercises' => []
+      ];
+
+      // Get completed exercises for this student
+      $stmt = $this->db->prepare('
+        SELECT
+          r.exercise_id,
+          MIN(r.timestamp) as first_timestamp,
+          GROUP_CONCAT(r.elapsed, ",") as attempts
+        FROM
+          results r
+        WHERE
+          r.email = ?
+        GROUP BY
+          r.exercise_id
+        ORDER BY
+          r.exercise_id
+      ');
+      $stmt->execute([$email]);
+      $completedExercises = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      // Create a lookup for completed exercises
+      $completedExercisesLookup = [];
+      foreach ($completedExercises as $exercise) {
+        $completedExercisesLookup[$exercise['exercise_id']] = $exercise;
+      }
+
+      // Add all exercises to the student's results
+      foreach ($allExercises as $exercise) {
+        $exerciseId = $exercise['id'];
+
+        if (isset($completedExercisesLookup[$exerciseId])) {
+          // Student has completed this exercise
+          $exerciseData = $completedExercisesLookup[$exerciseId];
+          $results[$email]['exercises'][] = [
+            'email' => $email,
+            'name' => $student['name'],
+            'exercise_id' => $exerciseId,
+            'first_timestamp' => $exerciseData['first_timestamp'],
+            'attempts' => $exerciseData['attempts']
+          ];
+        } else {
+          // Student has not completed this exercise
+          $results[$email]['exercises'][] = [
+            'email' => $email,
+            'name' => $student['name'],
+            'exercise_id' => $exerciseId,
+            'first_timestamp' => null,
+            'attempts' => ''
+          ];
+        }
+      }
+    }
+
+    return $results;
   }
 }
