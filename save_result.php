@@ -11,6 +11,12 @@ if (!isset($_SESSION['user']['email']) || !isset($data['exercise_id']) || !isset
   exit;
 }
 
+if ($data['elapsed'] < 11) {
+  http_response_code(400);
+  echo "Malformed time";
+  exit;
+}
+
 $stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed) VALUES (?, ?, ?, ?)');
 $stmt->execute([
   $_SESSION['user']['email'],
