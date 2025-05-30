@@ -45,11 +45,12 @@ function completionClass($cnt): string
     .tab{padding:10px 20px;text-decoration:none;color:#333;border:1px solid #ccc;border-bottom:none;border-radius:4px 4px 0 0;margin-right:5px;background:#f5f5f5}
     .tab.active{background:#fff;border-bottom:1px solid #fff;margin-bottom:-1px;font-weight:bold}
     .view-toggle{margin:15px 0}
-    .exercise-header,.student-header{background:#f0f0f0;padding:8px;margin-top:20px;font-weight:bold;border-radius:4px}
+    .exercise-header{background:#f0f0f0;padding:8px;margin-top:20px;font-weight:bold;border-radius:4px}
+    .student-header{background:#f0f0f0;padding:8px;margin-top:20px;margin-bottom:0;font-weight:bold;border-radius:4px 4px 0 0;border:1px solid #000}
     .completion-count{text-align:center;font-weight:bold}
     .completion-under-three{background:#ffff99}
     .completion-three-or-more{background:#ccffcc}
-    .no-attempt{background:#f0f0f0;color:#666}
+    .no-attempt{background: rgba(255, 142, 155, 0.68);color:#721c24}
     .filter-input{padding:5px;width:200px;margin-bottom:10px}
     .exercise-cell{cursor:pointer;text-decoration:none;color:inherit!important;display:flex;align-items:center;justify-content:center;position:relative;min-height:20px;padding:2px;background:transparent}
     .exercise-cell:hover{text-decoration:underline}
@@ -58,6 +59,9 @@ function completionClass($cnt): string
     .main-time{position:absolute;left:50%;transform:translateX(-50%);white-space:nowrap}
     .comparison-time{position:absolute;left:calc(50% + 2.8em);transform:translateX(-50%);font-size:.9em;color:#999;white-space:nowrap}
     .crown-icon{position:absolute;right:2px;top:50%;transform:translateY(-50%);font-size:1.2em;line-height:1}
+    .warning-icon{color:#ffc107;margin-right:5px;font-size:1em}
+    th{background:#f0f0f0}
+    .student-header + table{margin-top:0;border-top:none}
 </style>
 
 <?php if ($isExerciseTab): ?>
@@ -151,16 +155,36 @@ function completionClass($cnt): string
                 if ($best[$id] === INF) $best[$id] = null;
             }
             ?>
-            <div class="student-header"><?= h($grade) ?></div>
             <table>
-                <thead><tr><th>#</th><th>Õpilane</th><?php foreach ($allExercises as $ex){
+                <thead><tr><th>#</th><th><?= h($grade) ?></th><?php foreach ($allExercises as $ex){
                         $id = $ex['id'];
                         echo '<th>'.h($id).($avg[$id]!==null?' ('.round($avg[$id]).' s)':'').'</th>';
                     } ?></tr></thead>
                 <tbody>
                 <?php foreach ($students as $idx => $st): ?>
-                    <?php $lookup = array(); foreach ($st['exercises'] as $ex){ $lookup[$ex['exercise_id']] = $ex; } ?>
-                    <tr><td><?= $idx+1 ?></td><td><?= h($st['name']) ?></td>
+                    <?php
+                    $lookup = array();
+                    foreach ($st['exercises'] as $ex){ $lookup[$ex['exercise_id']] = $ex; }
+
+                    // Check if student has all exercises completed with 3+ attempts (all green)
+                    $hasAllGreen = true;
+                    foreach ($allExercises as $ex) {
+                        $id = $ex['id'];
+                        $d = isset($lookup[$id]) ? $lookup[$id] : null;
+                        if ($d && ($b = best($d['attempts'])) !== null) {
+                            $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
+                            if ($cnt < 3) { // Not green (less than 3 attempts)
+                                $hasAllGreen = false;
+                                break;
+                            }
+                        } else {
+                            // No attempt or no result
+                            $hasAllGreen = false;
+                            break;
+                        }
+                    }
+                    ?>
+                    <tr><td><?= $idx+1 ?></td><td><?= !$hasAllGreen ? '<span class="warning-icon">⚠️</span>' : '' ?><?= h($st['name']) ?></td>
                         <?php foreach ($allExercises as $ex): $id=$ex['id']; $d = isset($lookup[$id]) ? $lookup[$id] : null; if ($d && ($b=best($d['attempts']))!==null):
                             $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
                             $cls = completionClass($cnt);
