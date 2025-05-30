@@ -265,9 +265,31 @@ if ($exerciseFilter) {
         cursor: pointer;
         text-decoration: none;
         color: inherit;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        min-height: 20px;
       }
       .exercise-cell:hover {
         text-decoration: underline;
+      }
+
+      /* Time value container for consistent alignment */
+      .time-value {
+        display: inline-block;
+        text-align: center;
+        flex-grow: 1;
+      }
+
+      /* Crown icon positioning */
+      .crown-icon {
+        position: absolute;
+        right: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.8em;
+        line-height: 1;
       }
 
       /* Matrix table layout styling */
@@ -389,23 +411,24 @@ if ($exerciseFilter) {
                     // Get global average
                     $globalAverage = isset($globalAverages[$exerciseId]) ? $globalAverages[$exerciseId] : null;
 
-                    // Format cell content
-                    $cellContent = round($bestResult) . ' s';
+                    // Format time value content
+                    $timeContent = round($bestResult) . ' s';
                     if ($globalAverage !== null) {
-                      $cellContent .= ' (' . round($globalAverage) . ' s)';
+                      $timeContent .= ' (' . round($globalAverage) . ' s)';
                     }
 
-                    // Add crown icon if this is the best result for this exercise in this grade
-                    if ($gradeBestResults[$exerciseId] !== null && abs($bestResult - $gradeBestResults[$exerciseId]) < 0.001) {
-                      $cellContent .= ' 👑';
-                    }
+                    // Check if this is the best result for this exercise in this grade
+                    $hasCrown = $gradeBestResults[$exerciseId] !== null && abs($bestResult - $gradeBestResults[$exerciseId]) < 0.001;
 
                     $tooltipTitle = htmlspecialchars($student['name']) . ' parim tulemus (kõikide õpilaste keskmine tulemus)';
                     $detailUrl = '?page=results&exercise=' . urlencode($exerciseId) . '&summary=0&email=' . urlencode($student['email']) . '&tab=' . htmlspecialchars($activeTab);
 
                     echo '<td class="' . $completionClass . '">';
                     echo '<a href="' . $detailUrl . '" class="exercise-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="' . $tooltipTitle . '">';
-                    echo $cellContent;
+                    echo '<span class="time-value">' . $timeContent . '</span>';
+                    if ($hasCrown) {
+                      echo '<span class="crown-icon">👑</span>';
+                    }
                     echo '</a>';
                     echo '</td>';
                   } else {
