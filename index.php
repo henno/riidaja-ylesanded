@@ -154,10 +154,48 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
     }
   </script>
   <style>
-    body { font-family: sans-serif; }
-    nav.topbar { background: #f0f0f0; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+    /* Universal box-sizing for consistent layout */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    /* Global styling improvements */
+    body {
+      font-family: sans-serif;
+      background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+
+    /* Main content container with proper margins */
+    .main-content {
+      padding: 20px;
+    }
+
+    /* Navigation styling */
+    nav.topbar {
+      background: #f0f0f0;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 0;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
     nav.topbar a { margin: 0 10px; text-decoration: none; }
-    table { border-collapse: collapse; margin-top: 20px; width: 100%; }
+
+    /* Table styling with shadow */
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+      width: 100%;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);
+      background: white;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
     td, th { border: 1px solid #999; padding: 6px 10px; text-align: center; }
     .delete-link { color: red; text-decoration: none; margin-left: 8px; }
   </style>
@@ -177,6 +215,7 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
     </div>
   </nav>
 
+  <div class="main-content">
 <?php
 if ($page === 'tasks') {
   $taskController = new TaskController($resultsModel);
@@ -195,5 +234,6 @@ if ($page === 'students') {
   $studentsController->show();
 }
 ?>
+  </div>
 </body>
 </html>

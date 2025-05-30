@@ -174,7 +174,7 @@ if ($exerciseFilter) {
 
             // Check if this is an undone exercise
             $isUndone = empty($result['attempts']);
-            $completionClass = $isUndone ? 'no-attempt' : 
+            $completionClass = $isUndone ? 'no-attempt' :
                               ($attemptCount >= 3 ? 'completion-three-or-more' : 'completion-under-three');
             ?>
             <tr>
@@ -220,68 +220,205 @@ if ($exerciseFilter) {
       <input type="text" id="studentFilter" placeholder="Filtreeri õpilasi..." style="padding: 5px; width: 200px;">
     </div>
 
-    <?php foreach ($studentResults as $email => $student): ?>
-      <div class="student-header"><?php echo htmlspecialchars($student['name']); ?></div>
+    <?php
+    // Get student grades and group students by grade
+    require_once __DIR__ . '/../models/StudentsModel.php';
+    $studentsModel = new StudentsModel();
+    $studentsWithGrades = $studentsModel->getAllStudents();
 
-      <table>
-        <thead>
-          <tr>
-            <th>Harjutus</th>
-            <th>Tulemusi</th>
-            <th data-bs-toggle="tooltip" data-bs-placement="top" title="Õpilase parim tulemus (kõikide õpilaste keskmine tulemus)">Parim Tulemus (keskmine)</th>
-            <?php if ($isAdmin): ?>
-              <th></th>
-            <?php endif; ?>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($student['exercises'] as $exercise): ?>
-            <?php
-            $attempts = explode(',', $exercise['attempts']);
-            $attemptCount = count($attempts);
+    // Create a lookup for student grades
+    $studentGrades = [];
+    foreach ($studentsWithGrades as $student) {
+      $studentGrades[$student['email']] = $student['grade'];
+    }
 
-            // Check if this is an undone exercise
-            $isUndone = empty($exercise['attempts']);
-            $completionClass = $isUndone ? 'no-attempt' : 
-                              ($attemptCount >= 3 ? 'completion-three-or-more' : 'completion-under-three');
+    // Group students by grade
+    $studentsByGrade = [
+      '5r' => [],
+      '7r' => [],
+      '8r' => [],
+      'Määramata' => []
+    ];
 
-            // Find student's best result for this exercise
-            $bestResult = PHP_FLOAT_MAX;
-            foreach ($attempts as $attempt) {
-              $attempt = (float)$attempt;
-              if ($attempt < $bestResult) {
-                $bestResult = $attempt;
+    foreach ($studentResults as $email => $student) {
+      $grade = isset($studentGrades[$email]) ? $studentGrades[$email] : null;
+      $gradeKey = $grade ?: 'Määramata';
+
+      // Add grade info to student data
+      $student['grade'] = $grade;
+      $student['email'] = $email;
+
+      $studentsByGrade[$gradeKey][] = $student;
+    }
+
+    // Sort students within each grade by name
+    foreach ($studentsByGrade as $grade => $students) {
+      usort($studentsByGrade[$grade], function($a, $b) {
+        return strcmp($a['name'], $b['name']);
+      });
+    }
+    ?>
+
+    <!-- Add CSS for clickable exercise cells and matrix layout -->
+    <style>
+      .exercise-cell {
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+      }
+      .exercise-cell:hover {
+        text-decoration: underline;
+      }
+
+      /* Matrix table layout styling */
+      .student-header {
+        margin-bottom: 0;
+      }
+      .student-header + table {
+        margin-top: 0;
+        table-layout: fixed;
+        width: 100%;
+      }
+      .student-header + table th:first-child,
+      .student-header + table td:first-child {
+        width: 60px; /* Position column */
+      }
+      .student-header + table th:nth-child(2),
+      .student-header + table td:nth-child(2) {
+        width: 150px; /* Student name column */
+      }
+      .student-header + table th:nth-child(n+3),
+      .student-header + table td:nth-child(n+3) {
+        width: calc((100% - 210px) / <?php echo count($allExercises); ?>); /* Exercise columns */
+      }
+    </style>
+
+    <?php foreach ($studentsByGrade as $gradeLabel => $gradeStudents): ?>
+      <?php if (!empty($gradeStudents)): ?>
+        <?php
+        // Calculate best results for each exercise within this grade section
+        $gradeBestResults = [];
+
+        // Initialize best results array for all exercises
+        foreach ($allExercises as $exercise) {
+          $gradeBestResults[$exercise['id']] = PHP_FLOAT_MAX;
+        }
+
+        // Find the best result for each exercise among students in this grade
+        foreach ($gradeStudents as $student) {
+          foreach ($student['exercises'] as $exercise) {
+            $exerciseId = $exercise['exercise_id'];
+
+            // Only consider exercises with attempts
+            if (!empty($exercise['attempts'])) {
+              $attempts = explode(',', $exercise['attempts']);
+
+              // Find student's best result for this exercise
+              $studentBest = PHP_FLOAT_MAX;
+              foreach ($attempts as $attempt) {
+                $attempt = (float)$attempt;
+                if ($attempt < $studentBest) {
+                  $studentBest = $attempt;
+                }
+              }
+
+              // Update grade best if this student's result is better
+              if ($studentBest < $gradeBestResults[$exerciseId]) {
+                $gradeBestResults[$exerciseId] = $studentBest;
               }
             }
-            ?>
-            <tr>
-              <td class="<?= $completionClass ?>">Harjutus <?= htmlspecialchars($exercise['exercise_id']) ?></td>
-              <td class="completion-count <?= $completionClass ?>"><?= $isUndone ? '0' : (int)$attemptCount ?></td>
-              <?php
-              // Display student's best result and global average in parentheses
-              if ($bestResult !== PHP_FLOAT_MAX) {
-                $exerciseId = $exercise['exercise_id'];
-                $globalAverage = isset($globalAverages[$exerciseId]) ? $globalAverages[$exerciseId] : null;
+          }
+        }
 
-                echo '<td class="' . $completionClass . '" data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars($student['name']) . ' parim tulemus (kõikide õpilaste keskmine tulemus)">';
-                echo round($bestResult) . ' s';
-                if ($globalAverage !== null) {
-                  echo ' (' . round($globalAverage) . ' s)';
-                }
-                echo '</td>';
-              } else {
-                echo '<td class="' . $completionClass . '">-</td>';
-              }
-              ?>
-              <?php if ($isAdmin): ?>
-                <td>
-                  <a class="view-details-link" href="?page=results&exercise=<?= $exercise['exercise_id'] ?>&summary=0&email=<?= urlencode($email) ?>&tab=<?= htmlspecialchars($activeTab) ?>">🔍</a>
-                </td>
-              <?php endif; ?>
+        // Convert PHP_FLOAT_MAX to null for exercises with no attempts in this grade
+        foreach ($gradeBestResults as $exerciseId => $bestTime) {
+          if ($bestTime === PHP_FLOAT_MAX) {
+            $gradeBestResults[$exerciseId] = null;
+          }
+        }
+        ?>
+
+        <div class="student-header"><?php echo htmlspecialchars($gradeLabel); ?></div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Õpilane</th>
+              <?php foreach ($allExercises as $exercise): ?>
+                <th><?php echo htmlspecialchars($exercise['id']); ?></th>
+              <?php endforeach; ?>
             </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            <?php foreach ($gradeStudents as $index => $student): ?>
+              <tr>
+                <td><?php echo $index + 1; ?></td>
+                <td><?php echo htmlspecialchars($student['name']); ?></td>
+
+                <?php
+                // Create lookup for student's exercise data
+                $studentExercises = [];
+                foreach ($student['exercises'] as $exercise) {
+                  $studentExercises[$exercise['exercise_id']] = $exercise;
+                }
+                ?>
+
+                <?php foreach ($allExercises as $exercise): ?>
+                  <?php
+                  $exerciseId = $exercise['id'];
+                  $exerciseData = isset($studentExercises[$exerciseId]) ? $studentExercises[$exerciseId] : null;
+
+                  if ($exerciseData && !empty($exerciseData['attempts'])) {
+                    // Student has attempts for this exercise
+                    $attempts = explode(',', $exerciseData['attempts']);
+                    $attemptCount = count($attempts);
+
+                    // Find best result
+                    $bestResult = PHP_FLOAT_MAX;
+                    foreach ($attempts as $attempt) {
+                      $attempt = (float)$attempt;
+                      if ($attempt < $bestResult) {
+                        $bestResult = $attempt;
+                      }
+                    }
+
+                    // Determine completion class
+                    $completionClass = $attemptCount >= 3 ? 'completion-three-or-more' : 'completion-under-three';
+
+                    // Get global average
+                    $globalAverage = isset($globalAverages[$exerciseId]) ? $globalAverages[$exerciseId] : null;
+
+                    // Format cell content
+                    $cellContent = round($bestResult) . ' s';
+                    if ($globalAverage !== null) {
+                      $cellContent .= ' (' . round($globalAverage) . ' s)';
+                    }
+
+                    // Add crown icon if this is the best result for this exercise in this grade
+                    if ($gradeBestResults[$exerciseId] !== null && abs($bestResult - $gradeBestResults[$exerciseId]) < 0.001) {
+                      $cellContent .= ' 👑';
+                    }
+
+                    $tooltipTitle = htmlspecialchars($student['name']) . ' parim tulemus (kõikide õpilaste keskmine tulemus)';
+                    $detailUrl = '?page=results&exercise=' . urlencode($exerciseId) . '&summary=0&email=' . urlencode($student['email']) . '&tab=' . htmlspecialchars($activeTab);
+
+                    echo '<td class="' . $completionClass . '">';
+                    echo '<a href="' . $detailUrl . '" class="exercise-cell" data-bs-toggle="tooltip" data-bs-placement="top" title="' . $tooltipTitle . '">';
+                    echo $cellContent;
+                    echo '</a>';
+                    echo '</td>';
+                  } else {
+                    // Student has no attempts for this exercise
+                    echo '<td class="no-attempt">-</td>';
+                  }
+                  ?>
+                <?php endforeach; ?>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php endif; ?>
     <?php endforeach; ?>
   <?php endif; ?>
 <?php endif; ?>
@@ -349,26 +486,43 @@ if ($exerciseFilter) {
   if (studentFilter) {
     studentFilter.addEventListener('input', function() {
       const filterValue = this.value.toLowerCase();
-      const studentHeaders = document.querySelectorAll('.student-header');
       let matchFound = false;
 
-      // Create a container for student sections if it doesn't exist
-      let studentSections = document.querySelectorAll('.student-section');
+      // Get all grade sections (headers and their tables)
+      const gradeHeaders = document.querySelectorAll('.student-header');
 
-      // Process each student header and its corresponding table
-      studentHeaders.forEach((header, index) => {
-        // Get the student name from the header
-        const studentName = header.textContent.toLowerCase();
+      gradeHeaders.forEach(header => {
         const table = header.nextElementSibling;
-
-        // Skip if table is not found
         if (!table || table.tagName !== 'TABLE') return;
 
-        // Show/hide based on filter match
-        if (studentName.includes(filterValue)) {
+        const tbody = table.querySelector('tbody');
+        if (!tbody) return;
+
+        const rows = tbody.querySelectorAll('tr');
+        let gradeHasMatches = false;
+
+        // Check each student row in this grade
+        rows.forEach(row => {
+          const studentNameCell = row.querySelector('td:nth-child(2)'); // Student name is now in 2nd column
+
+          if (studentNameCell) {
+            const studentName = studentNameCell.textContent.toLowerCase();
+
+            // Show/hide row based on filter match (name only)
+            if (studentName.includes(filterValue)) {
+              row.style.display = '';
+              gradeHasMatches = true;
+              matchFound = true;
+            } else {
+              row.style.display = 'none';
+            }
+          }
+        });
+
+        // Show/hide entire grade section based on whether it has matches
+        if (gradeHasMatches || !filterValue) {
           header.style.display = '';
           table.style.display = '';
-          matchFound = true;
         } else {
           header.style.display = 'none';
           table.style.display = 'none';
