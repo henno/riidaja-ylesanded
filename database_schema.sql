@@ -4,11 +4,11 @@ CREATE TABLE migrations (
         applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 CREATE TABLE IF NOT EXISTS "results" (
-  id INTEGER PRIMARY KEY, 
-  email TEXT, 
-  name TEXT, 
+  id INTEGER PRIMARY KEY,
+  email TEXT,
+  name TEXT,
   exercise_id TEXT,  -- Changed from INTEGER to TEXT to support both formats
-  elapsed REAL, 
+  elapsed REAL,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE exercises (
@@ -16,4 +16,9 @@ CREATE TABLE exercises (
   title TEXT,
   target_time REAL,
   description TEXT
+);
+CREATE TABLE students (
+    email TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    grade TEXT
 );

@@ -5,8 +5,10 @@ date_default_timezone_set('Europe/Tallinn');
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/models/Database.php';
 require_once __DIR__ . '/models/ResultsModel.php';
+require_once __DIR__ . '/models/StudentsModel.php';
 require_once __DIR__ . '/controllers/TaskController.php';
 require_once __DIR__ . '/controllers/ResultsController.php';
+require_once __DIR__ . '/controllers/StudentsController.php';
 // Check if config.php exists, if not, create it from the sample
 if (!file_exists(__DIR__ . '/config.php') && file_exists(__DIR__ . '/config.sample.php')) {
     copy(__DIR__ . '/config.sample.php', __DIR__ . '/config.php');
@@ -109,9 +111,10 @@ if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
   }
 }
 
-$isAdmin = isset($_SESSION['user']['email']) && $_SESSION['user']['email'] === 'henno.taht@torva.edu.ee';
+$isAdmin = isset($_SESSION['user']['email']) && $_SESSION['user']['email'] === ADMIN_EMAIL;
 
 $resultsModel = new ResultsModel();
+$studentsModel = new StudentsModel();
 
 if ($isAdmin && isset($_GET['delete'])) {
   $resultsModel->delete((int)$_GET['delete']);
@@ -165,6 +168,9 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
       <strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? ''); ?></strong>
       <a href="?page=tasks">Ülesanded</a>
       <a href="?page=results">Tulemused</a>
+      <?php if ($isAdmin): ?>
+        <a href="?page=students">Õpilased</a>
+      <?php endif; ?>
     </div>
     <div class="nav-right">
       <a href="?logout=1">Logi välja</a>
@@ -182,6 +188,11 @@ if ($page === 'tasks') {
 if ($page === 'results') {
   $resultsController = new ResultsController($resultsModel, $isAdmin);
   $resultsController->show($_GET['exercise'] ?? null);
+}
+
+if ($page === 'students') {
+  $studentsController = new StudentsController($studentsModel, $isAdmin);
+  $studentsController->show();
 }
 ?>
 </body>
