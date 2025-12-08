@@ -3,5 +3,14 @@
     "thenetworg/oauth2-azure": "^2.0",
     "microsoft/microsoft-graph": "^1.100",
     "ext-pdo": "*"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "process-timeout": 300,
+    "allow-plugins": {
+      "*": true
+    }
   }
 }

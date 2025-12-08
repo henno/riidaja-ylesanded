@@ -10,6 +10,7 @@ function composer() {
   docker run --rm \
     -v $(pwd):/app \
     -v ${COMPOSER_HOME:-$HOME/.composer}:/tmp/composer \
+    -e COMPOSER_CACHE_DIR=/tmp/composer/cache \
     -w /app \
     --entrypoint sh \
     composer:latest -c "git config --global --add safe.directory /app && composer $*"
@@ -17,8 +18,8 @@ function composer() {
 
 function start() {
   # Run composer install to ensure dependencies are up to date
-  echo "Running composer install..."
-  composer install
+  echo "Running optimized composer install..."
+  composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
 
   # Build and run in one command
   echo "Building and starting PHP server..."
