@@ -1,0 +1,592 @@
+
+<style>
+    #typing-table {
+        width: 100%;
+        max-width: 1250px;
+        margin: 20px auto;
+        border-collapse: collapse;
+    }
+    #typing-table th, #typing-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        vertical-align: top;
+    }
+    #typing-table th {
+        background-color: #f2f2f2;
+    }
+    #typing-table td {
+        position: relative;
+        height: 400px;
+    }
+    .text-display {
+        white-space: pre-wrap;
+        font-family: monospace;
+        font-size: 18px;
+        line-height: 1.8;
+        text-align: left;
+        height: 100%;
+        overflow: auto;
+        user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+    .typing-input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+    }
+    .word {
+        display: inline;
+    }
+    .letter {
+        position: relative;
+    }
+    .letter.correct {
+        color: #4CAF50;
+    }
+    .letter.incorrect {
+        color: #f44336;
+        background: #ffebee;
+    }
+    .letter.current {
+        background: #2196F3;
+        color: white;
+    }
+    #progress-info {
+        margin: 10px auto;
+        max-width: 1250px;
+        font-family: monospace;
+    }
+    #timer {
+        font-weight: bold;
+        color: #333;
+    }
+    .stat-row {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 10px;
+    }
+    .stat-item {
+        display: flex;
+        gap: 5px;
+    }
+    .stat-label {
+        color: #666;
+    }
+    .stat-value {
+        font-weight: bold;
+    }
+    .stat-value.success {
+        color: #4CAF50;
+    }
+    .stat-value.warning {
+        color: #ff9800;
+    }
+    .stat-value.danger {
+        color: #f44336;
+    }
+    .requirements {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+    }
+    /* Result Modal */
+    .result-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .result-modal.show {
+        display: flex;
+    }
+    .result-modal-content {
+        background: white;
+        padding: 40px;
+        border-radius: 10px;
+        max-width: 450px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .result-modal-content h2 {
+        margin: 0 0 10px 0;
+        font-size: 28px;
+    }
+    .result-modal-content h2.passed {
+        color: #4CAF50;
+    }
+    .result-modal-content h2.failed {
+        color: #f44336;
+    }
+    .result-level {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 20px;
+    }
+    .result-stats {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    .result-stat-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+    }
+    .result-stat-row:last-child {
+        border-bottom: none;
+    }
+    .result-stat-label {
+        color: #666;
+    }
+    .result-stat-value {
+        font-weight: bold;
+    }
+    .result-stat-value.passed {
+        color: #4CAF50;
+    }
+    .result-stat-value.failed {
+        color: #f44336;
+    }
+    .result-message {
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .result-message.success {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+    .result-message.failure {
+        background: #ffebee;
+        color: #c62828;
+    }
+    .result-btn {
+        padding: 12px 40px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+    }
+    .result-btn.primary {
+        background: #4CAF50;
+        color: white;
+    }
+    .result-btn.primary:hover {
+        background: #45a049;
+    }
+    .result-btn.secondary {
+        background: #2196F3;
+        color: white;
+    }
+    .result-btn.secondary:hover {
+        background: #1976D2;
+    }
+</style>
+
+<p>Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Sul on aega 30 sekundit.</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ 20, Täpsus ≥ 90%</p>
+
+<form id="task-form">
+    <table id="typing-table">
+        <thead>
+        <tr><th>Kirjuta sõnad (klõpsa siia alustamiseks)</th></tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td><div id="text-display" class="text-display" tabindex="0"></div></td>
+        </tr>
+        </tbody>
+    </table>
+    <input type="text" class="typing-input" id="typing-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <div id="progress-info">
+        <div class="stat-row">
+            <div class="stat-item">
+                <span class="stat-label">Järelejäänud aeg:</span>
+                <span class="stat-value" id="timer">30.0 s</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">WPM:</span>
+                <span class="stat-value" id="wpm-display">0</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Täpsus:</span>
+                <span class="stat-value" id="accuracy-display">100%</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Vead:</span>
+                <span class="stat-value" id="errors-display">0</span>
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Result Modal -->
+<div class="result-modal" id="result-modal">
+    <div class="result-modal-content">
+        <h2 id="result-title">Tulemus</h2>
+        <div class="result-level" id="result-level">Tase 1</div>
+        <div class="result-stats">
+            <div class="result-stat-row">
+                <span class="result-stat-label">Kirjutamiskiirus (WPM):</span>
+                <span class="result-stat-value" id="result-wpm">0</span>
+            </div>
+            <div class="result-stat-row">
+                <span class="result-stat-label">Nõutav WPM:</span>
+                <span class="result-stat-value" id="result-req-wpm">20</span>
+            </div>
+            <div class="result-stat-row">
+                <span class="result-stat-label">Täpsus:</span>
+                <span class="result-stat-value" id="result-accuracy">100%</span>
+            </div>
+            <div class="result-stat-row">
+                <span class="result-stat-label">Nõutav täpsus:</span>
+                <span class="result-stat-value" id="result-req-accuracy">90%</span>
+            </div>
+            <div class="result-stat-row">
+                <span class="result-stat-label">Vead:</span>
+                <span class="result-stat-value" id="result-errors">0</span>
+            </div>
+        </div>
+        <div class="result-message" id="result-message"></div>
+        <button class="result-btn primary" id="result-btn" onclick="closeModal()">Jätka</button>
+    </div>
+</div>
+
+<script>
+    // Level requirements
+    const levels = {
+        1: { wpm: 20, accuracy: 90, name: 'Tase 1' },
+        2: { wpm: 30, accuracy: 90, name: 'Tase 2' },
+        3: { wpm: 40, accuracy: 90, name: 'Tase 3' }
+    };
+
+    const TIME_LIMIT = 30;
+
+    // Track completed levels (stored in localStorage)
+    let completedLevels = JSON.parse(localStorage.getItem('exercise006_completed') || '[]');
+
+    // Determine current level based on completions
+    let currentLevel = 1;
+    if (completedLevels.includes(1) && !completedLevels.includes(2)) currentLevel = 2;
+    if (completedLevels.includes(2) && !completedLevels.includes(3)) currentLevel = 3;
+    if (completedLevels.includes(3)) currentLevel = 3; // Stay on level 3 if all completed
+
+    // Estonian common words
+    const estonianWords = [
+        'ja', 'on', 'ei', 'see', 'kui', 'aga', 'kas', 'või', 'siis', 'et',
+        'ma', 'sa', 'ta', 'me', 'te', 'nad', 'kes', 'mis', 'kus', 'kuidas',
+        'miks', 'millal', 'oma', 'üks', 'kaks', 'kolm', 'neli', 'viis', 'kuus',
+        'seitse', 'kaheksa', 'üheksa', 'kümme', 'aeg', 'inimene', 'maja', 'tee',
+        'käsi', 'silm', 'jalg', 'päev', 'öö', 'hommik', 'õhtu', 'aasta', 'kuu',
+        'nädal', 'tund', 'minut', 'sekund', 'vesi', 'tuli', 'maa', 'taevas',
+        'päike', 'kuu', 'täht', 'puu', 'lill', 'lind', 'kala', 'koer', 'kass',
+        'laud', 'tool', 'raamat', 'paber', 'pliiats', 'õun', 'leib', 'piim',
+        'vein', 'kohv', 'tee', 'sool', 'suhkur', 'mesi', 'või', 'juust', 'liha',
+        'kana', 'muna', 'riis', 'kartul', 'tomat', 'kurk', 'sibul', 'küüslauk',
+        'punane', 'sinine', 'roheline', 'kollane', 'valge', 'must', 'hall', 'pruun',
+        'suur', 'väike', 'hea', 'halb', 'ilus', 'kena', 'kiire', 'aeglane',
+        'tugev', 'nõrk', 'pikk', 'lühike', 'lai', 'kitsas', 'uus', 'vana',
+        'minema', 'tulema', 'olema', 'tegema', 'võtma', 'andma', 'nägema', 'kuulma',
+        'teadma', 'mõtlema', 'rääkima', 'ütlema', 'küsima', 'vastama', 'lugema', 'kirjutama',
+        'sööma', 'jooma', 'magama', 'ärkama', 'istuma', 'seisma', 'kõndima', 'jooksma',
+        'töö', 'kool', 'kodu', 'perekond', 'ema', 'isa', 'laps', 'õde', 'vend',
+        'vanaema', 'vanaisa', 'sõber', 'naaber', 'õpetaja', 'arst', 'poliitik', 'kirjanik',
+        'riik', 'linn', 'küla', 'tänav', 'väljak', 'park', 'mets', 'jõgi', 'järv',
+        'meri', 'rand', 'mägi', 'org', 'väli', 'aed', 'õu', 'ruum', 'korter',
+        'auto', 'buss', 'tramm', 'rong', 'laev', 'lennuk', 'jalgratas', 'mootorratas',
+        'telefon', 'arvuti', 'internet', 'sõnum', 'kiri', 'pakett',
+        'number', 'arv', 'summa', 'hind', 'raha', 'euro', 'sent', 'palk',
+        'kell', 'minut', 'tund', 'varajane', 'hiline', 'nüüd', 'täna', 'homme', 'eile',
+        'alati', 'mitte', 'kunagi', 'vahel', 'sageli', 'harva', 'veel', 'juba', 'peaaegu',
+        'väga', 'liiga', 'palju', 'vähe', 'rohkem', 'vähem', 'kõik', 'mõni', 'ükski'
+    ];
+
+    function getRandomWords(count) {
+        const shuffled = [...estonianWords].sort(() => Math.random() - 0.5);
+        return shuffled.slice(0, Math.min(count, shuffled.length));
+    }
+
+    let words = getRandomWords(100);
+    let currentWordIndex = 0;
+    let currentLetterIndex = 0;
+    let errors = 0;
+    let correctChars = 0;
+    let totalChars = 0;
+    let startTime = null;
+    let isTestActive = false;
+    let timerInterval = null;
+
+    const textDisplay = document.getElementById('text-display');
+    const typingInput = document.getElementById('typing-input');
+    const timerDisplay = document.getElementById('timer');
+    const wpmDisplay = document.getElementById('wpm-display');
+    const accuracyDisplay = document.getElementById('accuracy-display');
+    const errorsDisplay = document.getElementById('errors-display');
+    const requirementsDisplay = document.getElementById('requirements');
+
+    function updateLevelDisplay() {
+        requirementsDisplay.textContent = `Nõuded: WPM ≥ ${levels[currentLevel].wpm}, Täpsus ≥ ${levels[currentLevel].accuracy}%`;
+    }
+
+    function initializeTest() {
+        textDisplay.innerHTML = '';
+        words.forEach((word, wordIdx) => {
+            const wordSpan = document.createElement('span');
+            wordSpan.className = 'word';
+            wordSpan.dataset.wordIndex = wordIdx;
+
+            word.split('').forEach((letter, letterIdx) => {
+                const letterSpan = document.createElement('span');
+                letterSpan.className = 'letter';
+                letterSpan.textContent = letter;
+                letterSpan.dataset.letterIndex = letterIdx;
+                wordSpan.appendChild(letterSpan);
+            });
+
+            // Add space after each word except the last
+            if (wordIdx < words.length - 1) {
+                const spaceSpan = document.createElement('span');
+                spaceSpan.className = 'letter space';
+                spaceSpan.textContent = ' ';
+                spaceSpan.dataset.letterIndex = word.length;
+                wordSpan.appendChild(spaceSpan);
+            }
+
+            textDisplay.appendChild(wordSpan);
+        });
+
+        updateCurrentLetter();
+        updateLevelDisplay();
+    }
+
+    function updateCurrentLetter() {
+        document.querySelectorAll('.letter.current').forEach(el => el.classList.remove('current'));
+
+        const currentWord = textDisplay.querySelector(`[data-word-index="${currentWordIndex}"]`);
+        if (currentWord) {
+            const currentLetter = currentWord.querySelector(`[data-letter-index="${currentLetterIndex}"]`);
+            if (currentLetter) {
+                currentLetter.classList.add('current');
+            }
+        }
+    }
+
+    function startTest() {
+        if (!isTestActive) {
+            isTestActive = true;
+            startTime = Date.now();
+            timerInterval = setInterval(updateStats, 100);
+        }
+    }
+
+    function updateStats() {
+        if (!startTime) return;
+
+        const elapsedSeconds = (Date.now() - startTime) / 1000;
+        const remainingSeconds = Math.max(0, TIME_LIMIT - elapsedSeconds);
+        const minutes = elapsedSeconds / 60;
+        const wpm = minutes > 0 ? Math.round((correctChars / 5) / minutes) : 0;
+        const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+
+        // Update timer
+        timerDisplay.textContent = remainingSeconds.toFixed(1) + ' s';
+        if (remainingSeconds <= 5) {
+            timerDisplay.className = 'stat-value danger';
+        } else if (remainingSeconds <= 10) {
+            timerDisplay.className = 'stat-value warning';
+        } else {
+            timerDisplay.className = 'stat-value';
+        }
+
+        // Update WPM with color coding
+        wpmDisplay.textContent = wpm;
+        if (wpm >= levels[currentLevel].wpm) {
+            wpmDisplay.className = 'stat-value success';
+        } else if (wpm >= levels[currentLevel].wpm * 0.7) {
+            wpmDisplay.className = 'stat-value warning';
+        } else {
+            wpmDisplay.className = 'stat-value danger';
+        }
+
+        // Update accuracy with color coding
+        accuracyDisplay.textContent = accuracy + '%';
+        if (accuracy >= levels[currentLevel].accuracy) {
+            accuracyDisplay.className = 'stat-value success';
+        } else if (accuracy >= levels[currentLevel].accuracy - 5) {
+            accuracyDisplay.className = 'stat-value warning';
+        } else {
+            accuracyDisplay.className = 'stat-value danger';
+        }
+
+        errorsDisplay.textContent = errors;
+
+        // Check if time is up
+        if (remainingSeconds <= 0) {
+            endTest();
+        }
+    }
+
+    function endTest() {
+        isTestActive = false;
+        clearInterval(timerInterval);
+
+        const elapsedSeconds = Math.min((Date.now() - startTime) / 1000, TIME_LIMIT);
+        const minutes = elapsedSeconds / 60;
+        const wpm = minutes > 0 ? Math.round((correctChars / 5) / minutes) : 0;
+        const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
+
+        // Check if passed
+        const passed = wpm >= levels[currentLevel].wpm && accuracy >= levels[currentLevel].accuracy;
+
+        // Save result to database
+        fetch('save_result.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                elapsed: elapsedSeconds.toFixed(2),
+                exercise_id: '006'
+            })
+        });
+
+        // Update modal content
+        const resultTitle = document.getElementById('result-title');
+        const resultLevel = document.getElementById('result-level');
+        const resultWpm = document.getElementById('result-wpm');
+        const resultReqWpm = document.getElementById('result-req-wpm');
+        const resultAccuracy = document.getElementById('result-accuracy');
+        const resultReqAccuracy = document.getElementById('result-req-accuracy');
+        const resultErrors = document.getElementById('result-errors');
+        const resultMessage = document.getElementById('result-message');
+        const resultBtn = document.getElementById('result-btn');
+
+        resultLevel.textContent = levels[currentLevel].name;
+        resultReqWpm.textContent = levels[currentLevel].wpm;
+        resultReqAccuracy.textContent = levels[currentLevel].accuracy + '%';
+        resultErrors.textContent = errors;
+
+        // WPM with pass/fail color
+        resultWpm.textContent = wpm;
+        resultWpm.className = 'result-stat-value ' + (wpm >= levels[currentLevel].wpm ? 'passed' : 'failed');
+
+        // Accuracy with pass/fail color
+        resultAccuracy.textContent = accuracy + '%';
+        resultAccuracy.className = 'result-stat-value ' + (accuracy >= levels[currentLevel].accuracy ? 'passed' : 'failed');
+
+        if (passed) {
+            // Mark level as completed and save to localStorage
+            if (!completedLevels.includes(currentLevel)) {
+                completedLevels.push(currentLevel);
+                localStorage.setItem('exercise006_completed', JSON.stringify(completedLevels));
+            }
+
+            resultTitle.textContent = 'LÄBITUD!';
+            resultTitle.className = 'passed';
+
+            if (currentLevel < 3) {
+                resultMessage.textContent = `Suurepärane! Sa läbisid ${levels[currentLevel].name}. Järgmisena ootab sind ${levels[currentLevel + 1].name}.`;
+                resultBtn.textContent = `Alusta ${levels[currentLevel + 1].name}`;
+            } else {
+                resultMessage.textContent = 'Fantastiline! Sa oled läbinud kõik tasemed!';
+                resultBtn.textContent = 'Sulge';
+            }
+            resultMessage.className = 'result-message success';
+            resultBtn.className = 'result-btn primary';
+        } else {
+            resultTitle.textContent = 'LÄBIMATA';
+            resultTitle.className = 'failed';
+
+            let failReasons = [];
+            if (wpm < levels[currentLevel].wpm) {
+                failReasons.push(`WPM on liiga madal (${wpm} < ${levels[currentLevel].wpm})`);
+            }
+            if (accuracy < levels[currentLevel].accuracy) {
+                failReasons.push(`Täpsus on liiga madal (${accuracy}% < ${levels[currentLevel].accuracy}%)`);
+            }
+            resultMessage.textContent = failReasons.join('. ') + '. Proovi uuesti!';
+            resultMessage.className = 'result-message failure';
+            resultBtn.textContent = 'Proovi uuesti';
+            resultBtn.className = 'result-btn secondary';
+        }
+
+        // Show modal
+        document.getElementById('result-modal').classList.add('show');
+    }
+
+    function closeModal() {
+        document.getElementById('result-modal').classList.remove('show');
+        location.reload();
+    }
+
+    // Event listeners
+    textDisplay.addEventListener('click', () => {
+        typingInput.focus();
+    });
+
+    typingInput.addEventListener('input', (e) => {
+        if (!isTestActive) {
+            startTest();
+        }
+
+        const typedChar = e.data;
+        if (!typedChar) return;
+
+        const currentWord = textDisplay.querySelector(`[data-word-index="${currentWordIndex}"]`);
+        if (!currentWord) return;
+
+        const currentLetter = currentWord.querySelector(`[data-letter-index="${currentLetterIndex}"]`);
+        if (!currentLetter) return;
+
+        const expectedChar = currentLetter.textContent;
+        totalChars++;
+
+        if (typedChar === expectedChar) {
+            currentLetter.classList.add('correct');
+            correctChars++;
+        } else {
+            currentLetter.classList.add('incorrect');
+            errors++;
+        }
+
+        currentLetterIndex++;
+
+        // Check if we're at the end of the word
+        const nextLetter = currentWord.querySelector(`[data-letter-index="${currentLetterIndex}"]`);
+        if (!nextLetter) {
+            // Move to next word
+            currentWordIndex++;
+            currentLetterIndex = 0;
+
+            // Check if all words completed
+            if (currentWordIndex >= words.length) {
+                endTest();
+                typingInput.value = '';
+                return;
+            }
+        }
+
+        updateCurrentLetter();
+        updateStats();
+        typingInput.value = '';
+    });
+
+    // Initialize
+    initializeTest();
+
+    // Auto-focus on load
+    typingInput.focus();
+</script>

@@ -60,9 +60,14 @@
 
       // Get exercise info
       $exercise = $resultsModel->getExercise($id);
-      $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null) 
-        ? number_format($exercise['target_time'], 2) . ' s' 
+      $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
+        ? number_format($exercise['target_time'], 2) . ' s'
         : '-';
+
+      // For exercise 006, add level progress placeholder (will be filled by JS)
+      if ($id === '006') {
+        $targetFormatted = '<span class="target-time-006">30 s</span> <span class="level-progress-006"></span>';
+      }
 
       // Get user's attempts for this exercise
       $attempts = $resultsModel->getUserAttempts($userEmail, $id);
@@ -129,3 +134,15 @@
   ?>
   </tbody>
 </table>
+
+<script>
+(function() {
+    // Update level progress for exercise 006 from localStorage
+    var completedLevels = JSON.parse(localStorage.getItem('exercise006_completed') || '[]');
+    var levelCount = completedLevels.length;
+    var progressSpan = document.querySelector('.level-progress-006');
+    if (progressSpan) {
+        progressSpan.textContent = '(' + levelCount + '/3)';
+    }
+})();
+</script>

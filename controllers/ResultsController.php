@@ -4,7 +4,7 @@ class ResultsController {
   private $resultsModel;
   private $isAdmin;
 
-  public function __construct($resultsModel, $isAdmin) {
+  public function __construct($resultsModel, $isAdmin, $blindTypingResultsModel = null) {
     $this->resultsModel = $resultsModel;
     $this->isAdmin = $isAdmin;
   }

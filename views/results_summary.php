@@ -202,6 +202,7 @@ function completionClass($cnt): string
     <?php endif; ?>
 <?php endif; ?>
 
+
 <script>
     (function(){
         /* summary toggle */
