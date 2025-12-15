@@ -199,7 +199,7 @@
 </style>
 
 <p>Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 20, Täpsus ≥ 90%</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ 40, Täpsus ≥ 90%</p>
 
 <form id="task-form">
     <table id="typing-table">
@@ -268,23 +268,10 @@
 </div>
 
 <script>
-    // Level requirements
-    const levels = {
-        1: { wpm: 20, accuracy: 90, name: 'Katse 1' },
-        2: { wpm: 30, accuracy: 90, name: 'Katse 2' },
-        3: { wpm: 40, accuracy: 90, name: 'Katse 3' }
-    };
-
+    // Requirements: 40 WPM, 90% accuracy
+    const REQUIRED_WPM = 40;
+    const REQUIRED_ACCURACY = 90;
     const TIME_LIMIT = 30;
-
-    // Track completed levels (stored in localStorage)
-    let completedLevels = JSON.parse(localStorage.getItem('exercise006_completed') || '[]');
-
-    // Determine current level based on completions
-    let currentLevel = 1;
-    if (completedLevels.includes(1) && !completedLevels.includes(2)) currentLevel = 2;
-    if (completedLevels.includes(2) && !completedLevels.includes(3)) currentLevel = 3;
-    if (completedLevels.includes(3)) currentLevel = 3; // Stay on level 3 if all completed
 
     // Estonian common words
     const estonianWords = [
@@ -339,10 +326,6 @@
     const errorsDisplay = document.getElementById('errors-display');
     const requirementsDisplay = document.getElementById('requirements');
 
-    function updateLevelDisplay() {
-        requirementsDisplay.textContent = `Nõuded: WPM ≥ ${levels[currentLevel].wpm}, Täpsus ≥ ${levels[currentLevel].accuracy}%`;
-    }
-
     function initializeTest() {
         textDisplay.innerHTML = '';
         words.forEach((word, wordIdx) => {
@@ -371,7 +354,6 @@
         });
 
         updateCurrentLetter();
-        updateLevelDisplay();
     }
 
     function updateCurrentLetter() {
@@ -415,9 +397,9 @@
 
         // Update WPM with color coding
         wpmDisplay.textContent = wpm;
-        if (wpm >= levels[currentLevel].wpm) {
+        if (wpm >= REQUIRED_WPM) {
             wpmDisplay.className = 'stat-value success';
-        } else if (wpm >= levels[currentLevel].wpm * 0.7) {
+        } else if (wpm >= REQUIRED_WPM * 0.7) {
             wpmDisplay.className = 'stat-value warning';
         } else {
             wpmDisplay.className = 'stat-value danger';
@@ -425,9 +407,9 @@
 
         // Update accuracy with color coding
         accuracyDisplay.textContent = accuracy + '%';
-        if (accuracy >= levels[currentLevel].accuracy) {
+        if (accuracy >= REQUIRED_ACCURACY) {
             accuracyDisplay.className = 'stat-value success';
-        } else if (accuracy >= levels[currentLevel].accuracy - 5) {
+        } else if (accuracy >= REQUIRED_ACCURACY - 5) {
             accuracyDisplay.className = 'stat-value warning';
         } else {
             accuracyDisplay.className = 'stat-value danger';
@@ -451,9 +433,9 @@
         const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
 
         // Check if passed
-        const passed = wpm >= levels[currentLevel].wpm && accuracy >= levels[currentLevel].accuracy;
+        const passed = wpm >= REQUIRED_WPM && accuracy >= REQUIRED_ACCURACY;
 
-        // Save WPM result to database (all attempts - passed and failed)
+        // Save WPM result to database
         // For failed attempts, save negative WPM to distinguish from passed
         fetch('save_result.php', {
             method: 'POST',
@@ -475,48 +457,36 @@
         const resultMessage = document.getElementById('result-message');
         const resultBtn = document.getElementById('result-btn');
 
-        resultLevel.textContent = levels[currentLevel].name;
-        resultReqWpm.textContent = levels[currentLevel].wpm;
-        resultReqAccuracy.textContent = levels[currentLevel].accuracy + '%';
+        resultLevel.textContent = 'Ülesanne 006';
+        resultReqWpm.textContent = REQUIRED_WPM;
+        resultReqAccuracy.textContent = REQUIRED_ACCURACY + '%';
         resultErrors.textContent = errors;
 
         // WPM with pass/fail color
         resultWpm.textContent = wpm;
-        resultWpm.className = 'result-stat-value ' + (wpm >= levels[currentLevel].wpm ? 'passed' : 'failed');
+        resultWpm.className = 'result-stat-value ' + (wpm >= REQUIRED_WPM ? 'passed' : 'failed');
 
         // Accuracy with pass/fail color
         resultAccuracy.textContent = accuracy + '%';
-        resultAccuracy.className = 'result-stat-value ' + (accuracy >= levels[currentLevel].accuracy ? 'passed' : 'failed');
+        resultAccuracy.className = 'result-stat-value ' + (accuracy >= REQUIRED_ACCURACY ? 'passed' : 'failed');
 
         if (passed) {
-            // Mark level as completed and save to localStorage
-            if (!completedLevels.includes(currentLevel)) {
-                completedLevels.push(currentLevel);
-                localStorage.setItem('exercise006_completed', JSON.stringify(completedLevels));
-            }
-
             resultTitle.textContent = 'LÄBITUD!';
             resultTitle.className = 'passed';
-
-            if (currentLevel < 3) {
-                resultMessage.textContent = `Suurepärane! Sa läbisid ${levels[currentLevel].name}. Järgmisena ootab sind ${levels[currentLevel + 1].name}.`;
-                resultBtn.textContent = `Alusta ${levels[currentLevel + 1].name.toLowerCase()}`;
-            } else {
-                resultMessage.textContent = 'Fantastiline! Sa oled läbinud kõik katsed!';
-                resultBtn.textContent = 'Sulge';
-            }
+            resultMessage.textContent = 'Suurepärane! Sa läbisid ülesande.';
             resultMessage.className = 'result-message success';
+            resultBtn.textContent = 'Proovi uuesti';
             resultBtn.className = 'result-btn primary';
         } else {
             resultTitle.textContent = 'LÄBIMATA';
             resultTitle.className = 'failed';
 
             let failReasons = [];
-            if (wpm < levels[currentLevel].wpm) {
-                failReasons.push(`WPM on liiga madal (${wpm} < ${levels[currentLevel].wpm})`);
+            if (wpm < REQUIRED_WPM) {
+                failReasons.push(`WPM on liiga madal (${wpm} < ${REQUIRED_WPM})`);
             }
-            if (accuracy < levels[currentLevel].accuracy) {
-                failReasons.push(`Täpsus on liiga madal (${accuracy}% < ${levels[currentLevel].accuracy}%)`);
+            if (accuracy < REQUIRED_ACCURACY) {
+                failReasons.push(`Täpsus on liiga madal (${accuracy}% < ${REQUIRED_ACCURACY}%)`);
             }
             resultMessage.textContent = failReasons.join('. ') + '. Proovi uuesti!';
             resultMessage.className = 'result-message failure';

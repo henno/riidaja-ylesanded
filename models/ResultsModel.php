@@ -19,11 +19,12 @@ class ResultsModel {
     // Exercise 006 stores WPM (higher is better, positive = passed)
     // Other exercises store time in seconds (lower is better)
     if ($exerciseId === '006') {
-      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE email = ? AND exercise_id = ? AND elapsed > 0');
+      $stmt->execute([$email, $exerciseId]);
     } else {
       $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+      $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     }
-    $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
 
@@ -34,18 +35,27 @@ class ResultsModel {
     // Exercise 006 stores WPM (higher is better, positive = passed)
     // Other exercises store time in seconds (lower is better)
     if ($exerciseId === '006') {
-      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
+      $stmt->execute([$exerciseId]);
+      $elapsed = $stmt->fetchColumn();
+
+      if ($elapsed !== false && $elapsed !== null) {
+        $stmt = $this->db->prepare('SELECT name FROM results WHERE exercise_id = ? AND elapsed = ? LIMIT 1');
+        $stmt->execute([$exerciseId, $elapsed]);
+        $name = $stmt->fetchColumn();
+        return ['elapsed' => $elapsed, 'name' => $name];
+      }
     } else {
       $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
-    }
-    $stmt->execute([$exerciseId, $numericExerciseId]);
-    $elapsed = $stmt->fetchColumn();
+      $stmt->execute([$exerciseId, $numericExerciseId]);
+      $elapsed = $stmt->fetchColumn();
 
-    if ($elapsed !== false && $elapsed !== null) {
-      $stmt = $this->db->prepare('SELECT name FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed = ? LIMIT 1');
-      $stmt->execute([$exerciseId, $numericExerciseId, $elapsed]);
-      $name = $stmt->fetchColumn();
-      return ['elapsed' => $elapsed, 'name' => $name];
+      if ($elapsed !== false && $elapsed !== null) {
+        $stmt = $this->db->prepare('SELECT name FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed = ? LIMIT 1');
+        $stmt->execute([$exerciseId, $numericExerciseId, $elapsed]);
+        $name = $stmt->fetchColumn();
+        return ['elapsed' => $elapsed, 'name' => $name];
+      }
     }
 
     return null;
@@ -57,11 +67,12 @@ class ResultsModel {
 
     // Exercise 006 stores WPM - only count positive (passed) results
     if ($exerciseId === '006') {
-      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
+      $stmt->execute([$exerciseId]);
     } else {
       $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+      $stmt->execute([$exerciseId, $numericExerciseId]);
     }
-    $stmt->execute([$exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
 
@@ -69,7 +80,6 @@ class ResultsModel {
     if ($exerciseId) {
       // Handle both string ('01') and numeric (1) exercise IDs
       $numericExerciseId = (int)$exerciseId;
-
       $stmt = $this->db->prepare('SELECT * FROM results WHERE exercise_id = ? OR exercise_id = ? ORDER BY timestamp DESC');
       $stmt->execute([$exerciseId, $numericExerciseId]);
       return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -82,7 +92,6 @@ class ResultsModel {
     if ($exerciseId) {
       // Handle both string ('01') and numeric (1) exercise IDs
       $numericExerciseId = (int)$exerciseId;
-
       $stmt = $this->db->prepare('SELECT * FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?) ORDER BY timestamp DESC');
       $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     } else {

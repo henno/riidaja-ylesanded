@@ -9,9 +9,17 @@ function h($s): string
  *  Helper functions
  * ----------------------------------------------------------------------- */
 
-function best($attempts){
+function best($attempts, $exerciseId = null){
     if ($attempts === '') return null;
     $arr = array_map('floatval', explode(',', $attempts));
+
+    // Exercise 006 stores WPM (higher is better, positive = passed)
+    // Exercise IDs can be 006, 006-1, 006-2, 006-3
+    if ($exerciseId !== null && strpos($exerciseId, '006') === 0) {
+        // Filter only positive values (passed attempts)
+        $positive = array_filter($arr, function($v) { return $v > 0; });
+        return $positive ? max($positive) : null;
+    }
     return min($arr);
 }
 
@@ -76,11 +84,17 @@ function completionClass($cnt): string
                 <?php continue; endif; ?>
             <?php
             usort($rows, function($a, $b){ return strcmp($a['name'], $b['name']); });
-            $globalBest = INF;
+            $is006 = ($exId === '006');
+            $unit = $is006 ? ' WPM' : ' s';
+            $globalBest = $is006 ? 0 : INF;
             foreach ($rows as $tmp){
-                $b = best($tmp['attempts']);
-                if ($b !== null && $b < $globalBest) $globalBest = $b;
+                $b = best($tmp['attempts'], $exId);
+                if ($b !== null) {
+                    if ($is006 && $b > $globalBest) $globalBest = $b;
+                    elseif (!$is006 && $b < $globalBest) $globalBest = $b;
+                }
             }
+            if ($globalBest === INF || $globalBest === 0) $globalBest = null;
             ?>
             <table>
                 <thead><tr>
@@ -90,15 +104,15 @@ function completionClass($cnt): string
                 <?php foreach ($rows as $r):
                     $attempts = $r['attempts'] === '' ? array() : explode(',', $r['attempts']);
                     $cnt      = count($attempts);
-                    $bestTry  = best($r['attempts']);
+                    $bestTry  = best($r['attempts'], $exId);
                     $cls      = completionClass($cnt);
-                    $isGlob   = ($bestTry !== null && abs($bestTry - $globalBest) < 0.001);
+                    $isGlob   = ($bestTry !== null && $globalBest !== null && abs($bestTry - $globalBest) < 0.001);
                     ?>
                     <tr>
                         <td class="<?= $cls ?><?= $isGlob ? ' global-best-result' : '' ?>"><?= h($r['name']) ?></td>
                         <td class="completion-count <?= $cls ?>"><?= $cnt ?></td>
                         <td class="<?= $cls ?>" data-bs-toggle="tooltip" title="<?= h($r['name']) ?> parim tulemus (kõikide õpilaste keskmine tulemus)">
-                            <?= $bestTry !== null ? round($bestTry) . ' s (' . round($globalAverages[$exId]) . ' s)' : '-' ?><?= $isGlob ? ' 👑' : '' ?>
+                            <?= $bestTry !== null ? round($bestTry) . $unit . ' (' . round($globalAverages[$exId]) . $unit . ')' : '-' ?><?= $isGlob ? ' 👑' : '' ?>
                         </td>
                         <?php if ($isAdmin): ?>
                             <td><a class="exercise-cell" href="?page=results&exercise=<?= h($r['exercise_id']) ?>&summary=0&email=<?= urlencode($r['email']) ?>&tab=<?= $activeTab ?>">🔍</a></td>
@@ -137,28 +151,33 @@ function completionClass($cnt): string
             $best = $avg = $raw = array();
             foreach ($allExercises as $ex){
                 $id = $ex['id'];
-                $best[$id] = INF;
+                $best[$id] = ($id === '006') ? 0 : INF;
                 $raw[$id]  = array();
             }
             foreach ($students as $st){
                 foreach ($st['exercises'] as $ex){
-                    $b = best($ex['attempts']);
+                    $id = $ex['exercise_id'];
+                    $b = best($ex['attempts'], $id);
                     if ($b !== null){
-                        $id = $ex['exercise_id'];
-                        if ($b < $best[$id]) $best[$id] = $b;
+                        if ($id === '006') {
+                            if ($b > $best[$id]) $best[$id] = $b;
+                        } else {
+                            if ($b < $best[$id]) $best[$id] = $b;
+                        }
                         $raw[$id][] = $b;
                     }
                 }
             }
             foreach ($raw as $id=>$vals){
                 $avg[$id] = $vals ? array_sum($vals)/count($vals) : null;
-                if ($best[$id] === INF) $best[$id] = null;
+                if ($best[$id] === INF || $best[$id] === 0) $best[$id] = null;
             }
             ?>
             <table>
                 <thead><tr><th>#</th><th><?= h($grade) ?></th><?php foreach ($allExercises as $ex){
                         $id = $ex['id'];
-                        echo '<th>'.h($id).($avg[$id]!==null?' ('.round($avg[$id]).' s)':'').'</th>';
+                        $unit = ($id === '006') ? ' WPM' : ' s';
+                        echo '<th>'.h($id).($avg[$id]!==null?' ('.round($avg[$id]).$unit.')':'').'</th>';
                     } ?></tr></thead>
                 <tbody>
                 <?php foreach ($students as $idx => $st): ?>
@@ -171,7 +190,7 @@ function completionClass($cnt): string
                     foreach ($allExercises as $ex) {
                         $id = $ex['id'];
                         $d = isset($lookup[$id]) ? $lookup[$id] : null;
-                        if ($d && ($b = best($d['attempts'])) !== null) {
+                        if ($d && ($b = best($d['attempts'], $id)) !== null) {
                             $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
                             if ($cnt < 3) { // Not green (less than 3 attempts)
                                 $hasAllGreen = false;
@@ -185,14 +204,15 @@ function completionClass($cnt): string
                     }
                     ?>
                     <tr><td><?= $idx+1 ?></td><td><?= !$hasAllGreen ? '<span class="warning-icon">⚠️</span>' : '' ?><?= h($st['name']) ?></td>
-                        <?php foreach ($allExercises as $ex): $id=$ex['id']; $d = isset($lookup[$id]) ? $lookup[$id] : null; if ($d && ($b=best($d['attempts']))!==null):
+                        <?php foreach ($allExercises as $ex): $id=$ex['id']; $d = isset($lookup[$id]) ? $lookup[$id] : null; if ($d && ($b=best($d['attempts'], $id))!==null):
                             $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
                             $cls = completionClass($cnt);
+                            $unit = ($id === '006') ? ' WPM' : ' s';
                             $diff = $avg[$id]!==null ? round($b - $avg[$id]) : 0;
-                            $comp = $diff ? '(' . ($diff>0?'+':'') . $diff . ' s)' : '';
+                            $comp = $diff ? '(' . ($diff>0?'+':'') . $diff . $unit . ')' : '';
                             $top = ($best[$id]!==null && abs($b-$best[$id])<0.001);
                             ?>
-                            <td class="<?= $cls ?>"><a href="?page=results&exercise=<?= urlencode($id) ?>&summary=0&email=<?= urlencode($st['email']) ?>&tab=<?= $activeTab ?>" class="exercise-cell" data-bs-toggle="tooltip" title="<?= h($st['name']) ?> parim tulemus (kõikide õpilaste keskmine tulemus)"><span class="time-content"><span class="main-time"><?= round($b) ?> s</span><?= $comp?'<span class="comparison-time">'.$comp.'</span>':'' ?></span><?= $top ? '<span class="crown-icon">👑</span>' : '' ?></a></td>
+                            <td class="<?= $cls ?>"><a href="?page=results&exercise=<?= urlencode($id) ?>&summary=0&email=<?= urlencode($st['email']) ?>&tab=<?= $activeTab ?>" class="exercise-cell" data-bs-toggle="tooltip" title="<?= h($st['name']) ?> parim tulemus (kõikide õpilaste keskmine tulemus)"><span class="time-content"><span class="main-time"><?= round($b) ?><?= $unit ?></span><?= $comp?'<span class="comparison-time">'.$comp.'</span>':'' ?></span><?= $top ? '<span class="crown-icon">👑</span>' : '' ?></a></td>
                         <?php else: ?><td class="no-attempt">-</td><?php endif; endforeach; ?>
                     </tr>
                 <?php endforeach; ?>

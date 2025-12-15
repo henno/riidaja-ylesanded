@@ -40,7 +40,7 @@ if ($emailFilter && $exerciseFilter) {
       <td><?= htmlspecialchars($row['name']) ?></td>
       <td><?= htmlspecialchars($row['email']) ?></td>
       <td><?= htmlspecialchars($row['exercise_id']) ?></td>
-      <?php if ($row['exercise_id'] === '006'): ?>
+      <?php if (strpos($row['exercise_id'], '006') === 0): ?>
         <?php $wpm = $row['elapsed']; $failed = $wpm < 0; ?>
         <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>

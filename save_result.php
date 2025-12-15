@@ -13,7 +13,8 @@ if (!isset($_SESSION['user']['email']) || !isset($data['exercise_id']) || !isset
 
 // Exercise 006 saves WPM (positive = passed, negative = failed)
 // Other exercises save time in seconds (minimum 11s)
-if ($data['exercise_id'] === '006') {
+$is006 = ($data['exercise_id'] === '006');
+if ($is006) {
   // Allow any non-zero WPM (negative for failed, positive for passed)
   if ($data['elapsed'] == 0) {
     http_response_code(400);
