@@ -270,9 +270,9 @@
 <script>
     // Level requirements
     const levels = {
-        1: { wpm: 20, accuracy: 90, name: 'Tase 1' },
-        2: { wpm: 30, accuracy: 90, name: 'Tase 2' },
-        3: { wpm: 40, accuracy: 90, name: 'Tase 3' }
+        1: { wpm: 20, accuracy: 90, name: 'Katse 1' },
+        2: { wpm: 30, accuracy: 90, name: 'Katse 2' },
+        3: { wpm: 40, accuracy: 90, name: 'Katse 3' }
     };
 
     const TIME_LIMIT = 30;
@@ -453,12 +453,13 @@
         // Check if passed
         const passed = wpm >= levels[currentLevel].wpm && accuracy >= levels[currentLevel].accuracy;
 
-        // Save result to database
+        // Save WPM result to database (all attempts - passed and failed)
+        // For failed attempts, save negative WPM to distinguish from passed
         fetch('save_result.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                elapsed: elapsedSeconds.toFixed(2),
+                elapsed: passed ? wpm : -wpm,
                 exercise_id: '006'
             })
         });
@@ -499,9 +500,9 @@
 
             if (currentLevel < 3) {
                 resultMessage.textContent = `Suurepärane! Sa läbisid ${levels[currentLevel].name}. Järgmisena ootab sind ${levels[currentLevel + 1].name}.`;
-                resultBtn.textContent = `Alusta ${levels[currentLevel + 1].name}`;
+                resultBtn.textContent = `Alusta ${levels[currentLevel + 1].name.toLowerCase()}`;
             } else {
-                resultMessage.textContent = 'Fantastiline! Sa oled läbinud kõik tasemed!';
+                resultMessage.textContent = 'Fantastiline! Sa oled läbinud kõik katsed!';
                 resultBtn.textContent = 'Sulge';
             }
             resultMessage.className = 'result-message success';
@@ -535,6 +536,56 @@
     // Event listeners
     textDisplay.addEventListener('click', () => {
         typingInput.focus();
+    });
+
+    // Handle backspace key
+    typingInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace') {
+            e.preventDefault();
+
+            if (!isTestActive) return;
+
+            // Can't go back if at the very beginning
+            if (currentWordIndex === 0 && currentLetterIndex === 0) return;
+
+            // Go back one position
+            if (currentLetterIndex > 0) {
+                currentLetterIndex--;
+            } else {
+                // Go to previous word
+                currentWordIndex--;
+                const prevWord = textDisplay.querySelector(`[data-word-index="${currentWordIndex}"]`);
+                if (prevWord) {
+                    const letters = prevWord.querySelectorAll('.letter');
+                    currentLetterIndex = letters.length - 1;
+                }
+            }
+
+            // Get the letter we're going back to
+            const currentWord = textDisplay.querySelector(`[data-word-index="${currentWordIndex}"]`);
+            if (currentWord) {
+                const currentLetter = currentWord.querySelector(`[data-letter-index="${currentLetterIndex}"]`);
+                if (currentLetter) {
+                    // If the letter was incorrect, reduce error count
+                    if (currentLetter.classList.contains('incorrect')) {
+                        errors--;
+                    }
+                    // If the letter was correct, reduce correct count
+                    if (currentLetter.classList.contains('correct')) {
+                        correctChars--;
+                    }
+                    // Reduce total chars if letter was typed
+                    if (currentLetter.classList.contains('correct') || currentLetter.classList.contains('incorrect')) {
+                        totalChars--;
+                    }
+                    // Remove styling
+                    currentLetter.classList.remove('correct', 'incorrect');
+                }
+            }
+
+            updateCurrentLetter();
+            updateStats();
+        }
     });
 
     typingInput.addEventListener('input', (e) => {

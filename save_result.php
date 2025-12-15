@@ -11,10 +11,21 @@ if (!isset($_SESSION['user']['email']) || !isset($data['exercise_id']) || !isset
   exit;
 }
 
-if ($data['elapsed'] < 11) {
-  http_response_code(400);
-  echo "Malformed time";
-  exit;
+// Exercise 006 saves WPM (positive = passed, negative = failed)
+// Other exercises save time in seconds (minimum 11s)
+if ($data['exercise_id'] === '006') {
+  // Allow any non-zero WPM (negative for failed, positive for passed)
+  if ($data['elapsed'] == 0) {
+    http_response_code(400);
+    echo "Malformed value";
+    exit;
+  }
+} else {
+  if ($data['elapsed'] < 11) {
+    http_response_code(400);
+    echo "Malformed value";
+    exit;
+  }
 }
 
 $stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed) VALUES (?, ?, ?, ?)');

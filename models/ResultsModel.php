@@ -16,7 +16,13 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+    // Exercise 006 stores WPM (higher is better, positive = passed)
+    // Other exercises store time in seconds (lower is better)
+    if ($exerciseId === '006') {
+      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+    } else {
+      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+    }
     $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }
@@ -25,11 +31,17 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    // Exercise 006 stores WPM (higher is better, positive = passed)
+    // Other exercises store time in seconds (lower is better)
+    if ($exerciseId === '006') {
+      $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+    } else {
+      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    }
     $stmt->execute([$exerciseId, $numericExerciseId]);
     $elapsed = $stmt->fetchColumn();
 
-    if ($elapsed !== false) {
+    if ($elapsed !== false && $elapsed !== null) {
       $stmt = $this->db->prepare('SELECT name FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed = ? LIMIT 1');
       $stmt->execute([$exerciseId, $numericExerciseId, $elapsed]);
       $name = $stmt->fetchColumn();
@@ -43,7 +55,12 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    // Exercise 006 stores WPM - only count positive (passed) results
+    if ($exerciseId === '006') {
+      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
+    } else {
+      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+    }
     $stmt->execute([$exerciseId, $numericExerciseId]);
     return $stmt->fetchColumn();
   }

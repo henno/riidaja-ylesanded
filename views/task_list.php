@@ -64,9 +64,14 @@
         ? number_format($exercise['target_time'], 2) . ' s'
         : '-';
 
-      // For exercise 006, add level progress placeholder (will be filled by JS)
+      // For exercise 006, show WPM requirements and format results as WPM
       if ($id === '006') {
-        $targetFormatted = '<span class="target-time-006">30 s</span> <span class="level-progress-006"></span>';
+        $targetFormatted = '1/3: 20 WPM 90%<br>2/3: 30 WPM 90%<br>3/3: 40 WPM 90%';
+        $myBestFormatted = ($myBest !== null && $myBest !== false) ? round($myBest) . ' WPM' : '-';
+        $bestFormatted = ($best && isset($best['elapsed']) && $best['elapsed'] !== null)
+          ? round($best['elapsed']) . ' WPM (' . htmlspecialchars($best['name']) . ')'
+          : '-';
+        $avgFormatted = ($avg !== null && $avg !== false) ? round($avg) . ' WPM' : '-';
       }
 
       // Get user's attempts for this exercise
@@ -135,14 +140,3 @@
   </tbody>
 </table>
 
-<script>
-(function() {
-    // Update level progress for exercise 006 from localStorage
-    var completedLevels = JSON.parse(localStorage.getItem('exercise006_completed') || '[]');
-    var levelCount = completedLevels.length;
-    var progressSpan = document.querySelector('.level-progress-006');
-    if (progressSpan) {
-        progressSpan.textContent = '(' + levelCount + '/3)';
-    }
-})();
-</script>
