@@ -66,18 +66,24 @@
 
       // Get exercise info
       $exercise = $resultsModel->getExercise($id);
-      $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
-        ? number_format($exercise['target_time'], 2) . ' s'
-        : '-';
+      $resultType = $exercise && isset($exercise['result_type']) ? $exercise['result_type'] : 'time';
 
-      // For exercise 006, show WPM requirements and format results as WPM
-      if ($id === '006') {
-        $targetFormatted = '40 WPM, 90%';
+      // Format based on result type
+      if ($resultType === 'wpm') {
+        // WPM exercises: show WPM requirements and format results as WPM
+        $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
+          ? round($exercise['target_time']) . ' WPM, 90%'
+          : '-';
         $myBestFormatted = ($myBest !== null && $myBest !== false) ? round($myBest) . ' WPM' : '-';
         $bestFormatted = ($best && isset($best['elapsed']) && $best['elapsed'] !== null)
           ? round($best['elapsed']) . ' WPM (' . htmlspecialchars($best['name']) . ')'
           : '-';
         $avgFormatted = ($avg !== null && $avg !== false) ? round($avg) . ' WPM' : '-';
+      } else {
+        // Time exercises: show seconds
+        $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
+          ? number_format($exercise['target_time'], 2) . ' s'
+          : '-';
       }
 
       // Get user's attempts for this exercise
@@ -87,8 +93,8 @@
       // Generate completion boxes HTML
       $completionBoxes = '<div class="completion-container">';
 
-      // Special handling for exercise 006 (WPM - only count passed attempts)
-      if ($id === '006') {
+      // Special handling for WPM exercises (only count passed attempts)
+      if ($resultType === 'wpm') {
         // Filter only positive values (passed attempts)
         $passedAttempts = array_filter($attempts, function($v) { return floatval($v) > 0; });
         $passedCount = count($passedAttempts);
