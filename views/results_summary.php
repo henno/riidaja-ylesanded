@@ -9,17 +9,17 @@ function h($s): string
  *  Helper functions
  * ----------------------------------------------------------------------- */
 
-function best($attempts, $exerciseId = null){
+function best($attempts, $resultType = 'time'){
     if ($attempts === '') return null;
     $arr = array_map('floatval', explode(',', $attempts));
 
-    // Exercise 006 stores WPM (higher is better, positive = passed)
-    // Exercise IDs can be 006, 006-1, 006-2, 006-3
-    if ($exerciseId !== null && strpos($exerciseId, '006') === 0) {
+    // WPM exercises: higher is better, use only positive values (passed attempts)
+    if ($resultType === 'wpm') {
         // Filter only positive values (passed attempts)
         $positive = array_filter($arr, function($v) { return $v > 0; });
         return $positive ? max($positive) : null;
     }
+    // Time exercises: lower is better
     return min($arr);
 }
 
@@ -76,6 +76,13 @@ function completionClass($cnt): string
     <?php if (empty($summaryResults)): ?>
         <p>Tulemusi pole.</p>
     <?php else: ?>
+        <?php
+        // Create exercise lookup table
+        $exerciseLookup = array();
+        foreach ($allExercises as $ex) {
+            $exerciseLookup[$ex['id']] = $ex;
+        }
+        ?>
         <input type="text" id="exerciseFilter" class="filter-input" placeholder="Filtreeri harjutusi...">
         <?php foreach ($summaryResults as $exId => $rows): ?>
             <div class="exercise-header">Harjutus <?= h($exId) ?></div>
@@ -84,14 +91,15 @@ function completionClass($cnt): string
                 <?php continue; endif; ?>
             <?php
             usort($rows, function($a, $b){ return strcmp($a['name'], $b['name']); });
-            $is006 = ($exId === '006');
-            $unit = $is006 ? ' WPM' : ' s';
-            $globalBest = $is006 ? 0 : INF;
+            $exercise = isset($exerciseLookup[$exId]) ? $exerciseLookup[$exId] : null;
+            $resultType = $exercise ? $exercise['result_type'] : 'time';
+            $unit = ($resultType === 'wpm') ? ' WPM' : ' s';
+            $globalBest = ($resultType === 'wpm') ? 0 : INF;
             foreach ($rows as $tmp){
-                $b = best($tmp['attempts'], $exId);
+                $b = best($tmp['attempts'], $resultType);
                 if ($b !== null) {
-                    if ($is006 && $b > $globalBest) $globalBest = $b;
-                    elseif (!$is006 && $b < $globalBest) $globalBest = $b;
+                    if ($resultType === 'wpm' && $b > $globalBest) $globalBest = $b;
+                    elseif ($resultType === 'time' && $b < $globalBest) $globalBest = $b;
                 }
             }
             if ($globalBest === INF || $globalBest === 0) $globalBest = null;
@@ -104,7 +112,7 @@ function completionClass($cnt): string
                 <?php foreach ($rows as $r):
                     $attempts = $r['attempts'] === '' ? array() : explode(',', $r['attempts']);
                     $cnt      = count($attempts);
-                    $bestTry  = best($r['attempts'], $exId);
+                    $bestTry  = best($r['attempts'], $resultType);
                     $cls      = completionClass($cnt);
                     $isGlob   = ($bestTry !== null && $globalBest !== null && abs($bestTry - $globalBest) < 0.001);
                     ?>
@@ -146,20 +154,30 @@ function completionClass($cnt): string
             usort($arr, function($a,$b){ return strcmp($a['name'], $b['name']); });
         }
         ?>
+        <?php
+        // Create exercise lookup table for students tab
+        $exerciseLookup = array();
+        foreach ($allExercises as $ex) {
+            $exerciseLookup[$ex['id']] = $ex;
+        }
+        ?>
         <?php foreach ($byGrade as $grade => $students): if (empty($students)) continue; ?>
             <?php
             $best = $avg = $raw = array();
             foreach ($allExercises as $ex){
                 $id = $ex['id'];
-                $best[$id] = ($id === '006') ? 0 : INF;
+                $resultType = $ex['result_type'];
+                $best[$id] = ($resultType === 'wpm') ? 0 : INF;
                 $raw[$id]  = array();
             }
             foreach ($students as $st){
                 foreach ($st['exercises'] as $ex){
                     $id = $ex['exercise_id'];
-                    $b = best($ex['attempts'], $id);
+                    $exData = isset($exerciseLookup[$id]) ? $exerciseLookup[$id] : null;
+                    $resultType = $exData ? $exData['result_type'] : 'time';
+                    $b = best($ex['attempts'], $resultType);
                     if ($b !== null){
-                        if ($id === '006') {
+                        if ($resultType === 'wpm') {
                             if ($b > $best[$id]) $best[$id] = $b;
                         } else {
                             if ($b < $best[$id]) $best[$id] = $b;
@@ -176,7 +194,7 @@ function completionClass($cnt): string
             <table>
                 <thead><tr><th>#</th><th><?= h($grade) ?></th><?php foreach ($allExercises as $ex){
                         $id = $ex['id'];
-                        $unit = ($id === '006') ? ' WPM' : ' s';
+                        $unit = ($ex['result_type'] === 'wpm') ? ' WPM' : ' s';
                         echo '<th>'.h($id).($avg[$id]!==null?' ('.round($avg[$id]).$unit.')':'').'</th>';
                     } ?></tr></thead>
                 <tbody>
@@ -190,7 +208,7 @@ function completionClass($cnt): string
                     foreach ($allExercises as $ex) {
                         $id = $ex['id'];
                         $d = isset($lookup[$id]) ? $lookup[$id] : null;
-                        if ($d && ($b = best($d['attempts'], $id)) !== null) {
+                        if ($d && ($b = best($d['attempts'], $ex['result_type'])) !== null) {
                             $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
                             if ($cnt < 3) { // Not green (less than 3 attempts)
                                 $hasAllGreen = false;
@@ -204,10 +222,10 @@ function completionClass($cnt): string
                     }
                     ?>
                     <tr><td><?= $idx+1 ?></td><td><?= !$hasAllGreen ? '<span class="warning-icon">⚠️</span>' : '' ?><?= h($st['name']) ?></td>
-                        <?php foreach ($allExercises as $ex): $id=$ex['id']; $d = isset($lookup[$id]) ? $lookup[$id] : null; if ($d && ($b=best($d['attempts'], $id))!==null):
+                        <?php foreach ($allExercises as $ex): $id=$ex['id']; $d = isset($lookup[$id]) ? $lookup[$id] : null; if ($d && ($b=best($d['attempts'], $ex['result_type']))!==null):
                             $cnt = $d['attempts'] === '' ? 0 : count(explode(',', $d['attempts']));
                             $cls = completionClass($cnt);
-                            $unit = ($id === '006') ? ' WPM' : ' s';
+                            $unit = ($ex['result_type'] === 'wpm') ? ' WPM' : ' s';
                             $diff = $avg[$id]!==null ? round($b - $avg[$id]) : 0;
                             $comp = $diff ? '(' . ($diff>0?'+':'') . $diff . $unit . ')' : '';
                             $top = ($best[$id]!==null && abs($b-$best[$id])<0.001);

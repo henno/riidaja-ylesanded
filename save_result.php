@@ -11,18 +11,28 @@ if (!isset($_SESSION['user']['email']) || !isset($data['exercise_id']) || !isset
   exit;
 }
 
-// Exercise 006 saves WPM (positive = passed, negative = failed)
-// Other exercises save time in seconds (minimum 11s)
-$is006 = ($data['exercise_id'] === '006');
-if ($is006) {
-  // Allow any non-zero WPM (negative for failed, positive for passed)
+// Get exercise configuration from database
+$stmt = $db->prepare('SELECT result_type, min_value FROM exercises WHERE id = ?');
+$stmt->execute([$data['exercise_id']]);
+$exercise = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$exercise) {
+  http_response_code(400);
+  echo "Invalid exercise ID";
+  exit;
+}
+
+// Validate result based on exercise type
+if ($exercise['result_type'] === 'wpm') {
+  // WPM exercises: allow any non-zero value (negative for failed, positive for passed)
   if ($data['elapsed'] == 0) {
     http_response_code(400);
     echo "Malformed value";
     exit;
   }
 } else {
-  if ($data['elapsed'] < 11) {
+  // Time-based exercises: validate minimum time
+  if ($data['elapsed'] < $exercise['min_value']) {
     http_response_code(400);
     echo "Malformed value";
     exit;

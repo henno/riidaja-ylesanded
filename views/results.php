@@ -40,7 +40,17 @@ if ($emailFilter && $exerciseFilter) {
       <td><?= htmlspecialchars($row['name']) ?></td>
       <td><?= htmlspecialchars($row['email']) ?></td>
       <td><?= htmlspecialchars($row['exercise_id']) ?></td>
-      <?php if (strpos($row['exercise_id'], '006') === 0): ?>
+      <?php
+      // Get exercise info to determine result type
+      global $resultsModel;
+      if (!isset($resultsModel)) {
+        require_once __DIR__ . '/../models/ResultsModel.php';
+        $resultsModel = new ResultsModel();
+      }
+      $exercise = $resultsModel->getExercise($row['exercise_id']);
+      $resultType = $exercise ? $exercise['result_type'] : 'time';
+      ?>
+      <?php if ($resultType === 'wpm'): ?>
         <?php $wpm = $row['elapsed']; $failed = $wpm < 0; ?>
         <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>

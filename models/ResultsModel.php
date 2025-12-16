@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/Database.php';
-
+//a
 class ResultsModel {
   private $db;
 
@@ -16,9 +16,15 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    // Exercise 006 stores WPM (higher is better, positive = passed)
-    // Other exercises store time in seconds (lower is better)
-    if ($exerciseId === '006') {
+    // Get exercise type to determine if we need MAX or MIN
+    $exercise = $this->getExercise($exerciseId);
+    if (!$exercise) {
+      return null;
+    }
+
+    // WPM exercises: higher is better, only count positive (passed) results
+    // Time exercises: lower is better
+    if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE email = ? AND exercise_id = ? AND elapsed > 0');
       $stmt->execute([$email, $exerciseId]);
     } else {
@@ -32,9 +38,15 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    // Exercise 006 stores WPM (higher is better, positive = passed)
-    // Other exercises store time in seconds (lower is better)
-    if ($exerciseId === '006') {
+    // Get exercise type to determine if we need MAX or MIN
+    $exercise = $this->getExercise($exerciseId);
+    if (!$exercise) {
+      return null;
+    }
+
+    // WPM exercises: higher is better, only count positive (passed) results
+    // Time exercises: lower is better
+    if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
       $stmt->execute([$exerciseId]);
       $elapsed = $stmt->fetchColumn();
@@ -65,8 +77,15 @@ class ResultsModel {
     // Handle both string ('01') and numeric (1) exercise IDs
     $numericExerciseId = (int)$exerciseId;
 
-    // Exercise 006 stores WPM - only count positive (passed) results
-    if ($exerciseId === '006') {
+    // Get exercise type to determine filtering
+    $exercise = $this->getExercise($exerciseId);
+    if (!$exercise) {
+      return null;
+    }
+
+    // WPM exercises: only count positive (passed) results
+    // Time exercises: count all results
+    if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
       $stmt->execute([$exerciseId]);
     } else {
@@ -195,8 +214,8 @@ class ResultsModel {
     $numericExerciseId = (int)$exerciseId;
 
     $stmt = $this->db->prepare('
-      SELECT id, title, target_time, description 
-      FROM exercises 
+      SELECT id, title, target_time, description, result_type, min_value
+      FROM exercises
       WHERE id = ? OR id = ?
       LIMIT 1
     ');
@@ -210,7 +229,7 @@ class ResultsModel {
    * @return array Array of exercise information
    */
   public function getAllExercisesInfo() {
-    $stmt = $this->db->query('SELECT id, title, target_time, description FROM exercises ORDER BY id');
+    $stmt = $this->db->query('SELECT id, title, target_time, description, result_type, min_value FROM exercises ORDER BY id');
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
