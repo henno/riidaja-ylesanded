@@ -116,6 +116,7 @@
     let originalText = '';
     let lastFirstErrorPos = -1;
     let debounceTimeout = null;
+    let currentProgressPercent = 0;
 
     // Text pairs: original and corrupted version
     // NB: Extra words must NEVER be at the beginning of a sentence (capitalization issue)
@@ -185,8 +186,8 @@
 
         // Update progress
         const totalChars = originalText.length;
-        const progressPercent = Math.floor((correctChars / totalChars) * 100);
-        progressDisplay.textContent = `Õigeid märke: ${correctChars}/${totalChars} (${progressPercent}%)`;
+        currentProgressPercent = Math.floor((correctChars / totalChars) * 100);
+        progressDisplay.textContent = `Õigeid märke: ${correctChars}/${totalChars} (${currentProgressPercent}%)`;
 
         return firstErrorPos === -1 && currentText.length === originalText.length;
     }
@@ -293,12 +294,13 @@
         timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
         if (elapsed >= 60) {
             clearInterval(timerInterval);
-            // Save failed attempt with negative elapsed time
+            // Save failed attempt with negative elapsed time and progress percentage
             fetch('save_result.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     elapsed: -elapsed.toFixed(2),
+                    accuracy: currentProgressPercent,
                     exercise_id: '005'
                 })
             }).then(() => {

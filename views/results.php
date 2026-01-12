@@ -59,8 +59,16 @@ if ($emailFilter && $exerciseFilter) {
         ?>
         <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM<?= $accuracyStr ?> <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>
-        <?php $elapsed = $row['elapsed']; $failed = $elapsed < 0; ?>
-        <td style="<?= $failed ? 'color: #f44336;' : '' ?>"><?= abs(round($elapsed)) ?> s <?= $failed ? '✗' : '' ?></td>
+        <?php
+        $elapsed = $row['elapsed'];
+        $failed = $elapsed < 0;
+        $accuracy = isset($row['accuracy']) ? $row['accuracy'] : null;
+        ?>
+        <?php if ($failed && $accuracy !== null): ?>
+          <td style="color: #f44336;"><?= round($accuracy) ?>% ✗</td>
+        <?php else: ?>
+          <td style="<?= $failed ? 'color: #f44336;' : '' ?>"><?= abs(round($elapsed)) ?> s <?= $failed ? '✗' : '' ?></td>
+        <?php endif; ?>
       <?php endif; ?>
       <?php if ($isAdmin): ?>
         <td><a class="delete-link" href="?page=results&delete=<?= $row['id'] ?>" onclick="return confirm('Kustuta see kirje?')">🗑</a></td>
