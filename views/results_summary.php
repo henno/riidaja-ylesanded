@@ -13,14 +13,16 @@ function best($attempts, $resultType = 'time'){
     if ($attempts === '') return null;
     $arr = array_map('floatval', explode(',', $attempts));
 
-    // WPM exercises: higher is better, use only positive values (passed attempts)
+    // Filter only positive values (passed attempts) for both types
+    $positive = array_filter($arr, function($v) { return $v > 0; });
+    if (!$positive) return null;
+
+    // WPM exercises: higher is better
     if ($resultType === 'wpm') {
-        // Filter only positive values (passed attempts)
-        $positive = array_filter($arr, function($v) { return $v > 0; });
-        return $positive ? max($positive) : null;
+        return max($positive);
     }
     // Time exercises: lower is better
-    return min($arr);
+    return min($positive);
 }
 
 function completionClass($cnt): string

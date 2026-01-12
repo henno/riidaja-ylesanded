@@ -191,8 +191,18 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
 
             if (elapsed >= targetTime) {
                 clearInterval(timerInterval);
-                alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
-                location.reload();
+                // Save failed attempt with negative elapsed time
+                fetch('save_result.php', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({
+                        elapsed:     -elapsed.toFixed(2),
+                        exercise_id: '<?= $exerciseId ?>'
+                    })
+                }).then(() => {
+                    alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
+                    location.reload();
+                });
             }
         }
 

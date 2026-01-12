@@ -178,8 +178,18 @@ function updateTimer() {
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
   if (elapsed >= 55) {
     clearInterval(timerInterval);
-    alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
-    location.reload();
+    // Save failed attempt with negative elapsed time
+    fetch('save_result.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        elapsed: -elapsed.toFixed(2),
+        exercise_id: '<?php echo htmlspecialchars($_GET["task"] ?? "02"); ?>'
+      })
+    }).then(() => {
+      alert('Lubatud aeg ületatud. Vajuta OK, et uuesti proovida.');
+      location.reload();
+    });
   }
 }
 </script>

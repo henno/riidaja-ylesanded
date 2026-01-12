@@ -54,7 +54,8 @@ if ($emailFilter && $exerciseFilter) {
         <?php $wpm = $row['elapsed']; $failed = $wpm < 0; ?>
         <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>
-        <td><?= round($row['elapsed']) ?> s</td>
+        <?php $elapsed = $row['elapsed']; $failed = $elapsed < 0; ?>
+        <td style="<?= $failed ? 'color: #f44336;' : '' ?>"><?= abs(round($elapsed)) ?> s <?= $failed ? '✗' : '' ?></td>
       <?php endif; ?>
       <?php if ($isAdmin): ?>
         <td><a class="delete-link" href="?page=results&delete=<?= $row['id'] ?>" onclick="return confirm('Kustuta see kirje?')">🗑</a></td>

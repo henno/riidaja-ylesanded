@@ -23,6 +23,7 @@ if (!$exercise) {
 }
 
 // Validate result based on exercise type
+// Negative values indicate failed attempts (for both WPM and time-based exercises)
 if ($exercise['result_type'] === 'wpm') {
   // WPM exercises: allow any non-zero value (negative for failed, positive for passed)
   if ($data['elapsed'] == 0) {
@@ -31,8 +32,8 @@ if ($exercise['result_type'] === 'wpm') {
     exit;
   }
 } else {
-  // Time-based exercises: validate minimum time
-  if ($data['elapsed'] < $exercise['min_value']) {
+  // Time-based exercises: negative = failed attempt, positive = validate minimum time
+  if ($data['elapsed'] >= 0 && $data['elapsed'] < $exercise['min_value']) {
     http_response_code(400);
     echo "Malformed value";
     exit;
