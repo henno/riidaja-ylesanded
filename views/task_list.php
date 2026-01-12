@@ -126,41 +126,38 @@
       }
       // Standard exercises (time-based)
       else {
+        // Filter only positive values (passed attempts)
+        $passedAttempts = array_filter($attempts, function($v) { return floatval($v) > 0; });
+        $passedAttempts = array_values($passedAttempts); // Re-index array
+        $passedCount = count($passedAttempts);
+
         // When the student has not passed the exercise a single time: 3 gray boxes with question marks
-        if ($completionCount == 0) {
+        if ($passedCount == 0) {
           for ($i = 0; $i < 3; $i++) {
             $completionBoxes .= '<div class="completion-box not-completed">?</div>';
           }
         }
         // When the student has passed the exercise 1-2 times: orange boxes with scores + black boxes
-        elseif ($completionCount < 3) {
+        elseif ($passedCount < 3) {
           // Show completed attempts (orange boxes with scores)
-          for ($i = 0; $i < $completionCount; $i++) {
-            $score = round($attempts[$i]);
+          for ($i = 0; $i < $passedCount; $i++) {
+            $score = round($passedAttempts[$i]);
             $completionBoxes .= '<div class="completion-box completed">' . $score . '</div>';
           }
 
           // Fill remaining slots with gray boxes with question marks
-          for ($i = $completionCount; $i < 3; $i++) {
+          for ($i = $passedCount; $i < 3; $i++) {
             $completionBoxes .= '<div class="completion-box not-completed">?</div>';
           }
         }
         // When the student has passed the exercise 3+ times: three green boxes with scores
         else {
           // For 3+ completions, show the three most relevant scores in green boxes
-          if ($completionCount > 3) {
-            // Get the last 3 results in reverse order (oldest to newest)
-            $relevantAttempts = array_slice($attempts, -3);
+          $relevantAttempts = array_slice($passedAttempts, -3);
 
-            foreach ($relevantAttempts as $attempt) {
-              $score = round($attempt);
-              $completionBoxes .= '<div class="completion-box completed-thrice">' . $score . '</div>';
-            }
-          } else { // Exactly 3 completions
-            foreach ($attempts as $attempt) {
-              $score = round($attempt);
-              $completionBoxes .= '<div class="completion-box completed-thrice">' . $score . '</div>';
-            }
+          foreach ($relevantAttempts as $attempt) {
+            $score = round($attempt);
+            $completionBoxes .= '<div class="completion-box completed-thrice">' . $score . '</div>';
           }
         }
       }
