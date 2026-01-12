@@ -39,10 +39,11 @@ if ($exercise['result_type'] === 'wpm') {
   }
 }
 
-$stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed) VALUES (?, ?, ?, ?)');
+$stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed, timestamp) VALUES (?, ?, ?, ?, ?)');
 $stmt->execute([
   $_SESSION['user']['email'],
   $_SESSION['user']['name'],
   $data['exercise_id'],
-  $data['elapsed']
+  $data['elapsed'],
+  date('Y-m-d H:i:s')
 ]);
