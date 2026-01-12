@@ -442,6 +442,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 elapsed: passed ? wpm : -wpm,
+                accuracy: accuracy,
                 exercise_id: '006'
             })
         });

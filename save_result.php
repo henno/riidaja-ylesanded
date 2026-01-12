@@ -40,11 +40,15 @@ if ($exercise['result_type'] === 'wpm') {
   }
 }
 
-$stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed, timestamp) VALUES (?, ?, ?, ?, ?)');
+// Get optional accuracy for WPM exercises
+$accuracy = isset($data['accuracy']) ? $data['accuracy'] : null;
+
+$stmt = $db->prepare('INSERT INTO results (email, name, exercise_id, elapsed, accuracy, timestamp) VALUES (?, ?, ?, ?, ?, ?)');
 $stmt->execute([
   $_SESSION['user']['email'],
   $_SESSION['user']['name'],
   $data['exercise_id'],
   $data['elapsed'],
+  $accuracy,
   date('Y-m-d H:i:s')
 ]);
