@@ -23,12 +23,12 @@ class ResultsModel {
     }
 
     // WPM exercises: higher is better, only count positive (passed) results
-    // Time exercises: lower is better
+    // Time exercises: lower is better, only count positive (passed) results
     if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE email = ? AND exercise_id = ? AND elapsed > 0');
       $stmt->execute([$email, $exerciseId]);
     } else {
-      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?)');
+      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE email = ? AND (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
       $stmt->execute([$email, $exerciseId, $numericExerciseId]);
     }
     return $stmt->fetchColumn();
@@ -45,7 +45,7 @@ class ResultsModel {
     }
 
     // WPM exercises: higher is better, only count positive (passed) results
-    // Time exercises: lower is better
+    // Time exercises: lower is better, only count positive (passed) results
     if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT MAX(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
       $stmt->execute([$exerciseId]);
@@ -58,7 +58,7 @@ class ResultsModel {
         return ['elapsed' => $elapsed, 'name' => $name];
       }
     } else {
-      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+      $stmt = $this->db->prepare('SELECT MIN(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
       $stmt->execute([$exerciseId, $numericExerciseId]);
       $elapsed = $stmt->fetchColumn();
 
@@ -84,12 +84,12 @@ class ResultsModel {
     }
 
     // WPM exercises: only count positive (passed) results
-    // Time exercises: count all results
+    // Time exercises: only count positive (passed) results
     if ($exercise['result_type'] === 'wpm') {
       $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? AND elapsed > 0');
       $stmt->execute([$exerciseId]);
     } else {
-      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE exercise_id = ? OR exercise_id = ?');
+      $stmt = $this->db->prepare('SELECT AVG(elapsed) FROM results WHERE (exercise_id = ? OR exercise_id = ?) AND elapsed > 0');
       $stmt->execute([$exerciseId, $numericExerciseId]);
     }
     return $stmt->fetchColumn();
