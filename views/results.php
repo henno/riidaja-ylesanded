@@ -55,7 +55,7 @@ if ($emailFilter && $exerciseFilter) {
         $wpm = $row['elapsed'];
         $failed = $wpm < 0;
         $accuracy = isset($row['accuracy']) ? $row['accuracy'] : null;
-        $accuracyStr = $accuracy !== null ? ' / ' . round($accuracy) . '%' : '';
+        $accuracyStr = $accuracy !== null ? ', ' . round($accuracy) . '%' : '';
         ?>
         <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM<?= $accuracyStr ?> <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>
