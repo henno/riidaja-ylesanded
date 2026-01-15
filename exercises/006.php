@@ -443,6 +443,7 @@
             body: JSON.stringify({
                 elapsed: passed ? wpm : -wpm,
                 accuracy: accuracy,
+                duration: Math.round(elapsedSeconds),
                 exercise_id: '006'
             })
         });

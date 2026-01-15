@@ -12,7 +12,7 @@ if ($emailFilter && $exerciseFilter) {
   echo "<h2>Tulemused – Ülesanne " . htmlspecialchars($exerciseFilter) . "</h2>";
   echo "<p><a href=\"?page=results&tab=" . htmlspecialchars($activeTab) . "\">« Kõik tulemused</a></p>";
 } else {
-  echo "<h2>Kõik tulemused</h2>";
+  echo "<h2>Kõik tulemused <span id=\"filter-count\" style=\"font-size: 14px; font-weight: normal; color: #666;\"></span></h2>";
 }
 ?>
 
@@ -27,10 +27,119 @@ if ($emailFilter && $exerciseFilter) {
   .view-toggle {
     margin: 15px 0;
   }
+  .filter-row td {
+    padding: 4px 6px;
+    background: #f9f9f9;
+  }
+  .filter-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .filter-wrapper input,
+  .filter-wrapper select {
+    width: 100%;
+    padding: 5px 24px 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    box-sizing: border-box;
+  }
+  .filter-wrapper input:focus,
+  .filter-wrapper select:focus {
+    outline: none;
+    border-color: #4CAF50;
+  }
+  .filter-clear-btn {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 14px;
+    padding: 2px 4px;
+    line-height: 1;
+    display: none;
+  }
+  .filter-clear-btn:hover {
+    color: #333;
+  }
+  .filter-wrapper.has-value .filter-clear-btn {
+    display: block;
+  }
+  /* Select dropdown - move X to the left of the arrow */
+  .filter-wrapper.has-select .filter-clear-btn {
+    right: 22px;
+  }
+  .filter-wrapper.has-select select {
+    padding-right: 40px;
+  }
+  .filter-count {
+    font-size: 13px;
+    color: #666;
+    margin-left: 10px;
+  }
+  /* Alternating day colors */
+  tr.day-even td {
+    background-color: #f5f5f5;
+  }
+  tr.day-odd td {
+    background-color: #e8e8e8;
+  }
 </style>
+
 <table>
   <thead>
     <tr><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th>Tulemus (s)</th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
+    <tr class="filter-row">
+      <td>
+        <div class="filter-wrapper">
+          <input type="date" id="filter-date" title="Filtreeri kuupäeva järgi">
+          <button class="filter-clear-btn" data-for="filter-date">&times;</button>
+        </div>
+      </td>
+      <td>
+        <div class="filter-wrapper">
+          <input type="text" id="filter-name" placeholder="Otsi...">
+          <button class="filter-clear-btn" data-for="filter-name">&times;</button>
+        </div>
+      </td>
+      <td>
+        <div class="filter-wrapper">
+          <input type="text" id="filter-email" placeholder="Otsi...">
+          <button class="filter-clear-btn" data-for="filter-email">&times;</button>
+        </div>
+      </td>
+      <td>
+        <div class="filter-wrapper has-select">
+          <select id="filter-exercise">
+            <option value="">Kõik</option>
+            <?php
+            $exercises = [];
+            foreach ($results as $row) {
+              if (!in_array($row['exercise_id'], $exercises)) {
+                $exercises[] = $row['exercise_id'];
+              }
+            }
+            sort($exercises);
+            foreach ($exercises as $ex): ?>
+              <option value="<?= htmlspecialchars($ex) ?>"><?= htmlspecialchars($ex) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <button class="filter-clear-btn" data-for="filter-exercise">&times;</button>
+        </div>
+      </td>
+      <td>
+        <div class="filter-wrapper">
+          <input type="text" id="filter-result" placeholder="nt: >50 või 10-30">
+          <button class="filter-clear-btn" data-for="filter-result">&times;</button>
+        </div>
+      </td>
+      <?php if ($isAdmin): ?><td></td><?php endif; ?>
+    </tr>
   </thead>
   <tbody>
   <?php foreach ($results as $row): ?>
@@ -55,9 +164,11 @@ if ($emailFilter && $exerciseFilter) {
         $wpm = $row['elapsed'];
         $failed = $wpm < 0;
         $accuracy = isset($row['accuracy']) ? $row['accuracy'] : null;
+        $duration = isset($row['duration']) ? $row['duration'] : null;
         $accuracyStr = $accuracy !== null ? ', ' . round($accuracy) . '%' : '';
+        $durationStr = $duration !== null ? ' (' . round($duration) . ' s)' : '';
         ?>
-        <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM<?= $accuracyStr ?> <?= $failed ? '✗' : '✓' ?></td>
+        <td style="<?= $failed ? 'color: #f44336;' : 'color: #4CAF50;' ?>"><?= abs(round($wpm)) ?> WPM<?= $accuracyStr ?><?= $durationStr ?> <?= $failed ? '✗' : '✓' ?></td>
       <?php else: ?>
         <?php
         $elapsed = $row['elapsed'];
@@ -126,4 +237,187 @@ if ($emailFilter && $exerciseFilter) {
       header.dataset.sortOrder = ascending ? 'asc' : 'desc';
     });
   });
+
+  // Filtering functionality
+  const filterDate = document.getElementById('filter-date');
+  const filterName = document.getElementById('filter-name');
+  const filterEmail = document.getElementById('filter-email');
+  const filterExercise = document.getElementById('filter-exercise');
+  const filterResult = document.getElementById('filter-result');
+  const tbody = document.querySelector('table tbody');
+  const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+  function parseDate(dateStr) {
+    // Parse dd.mm.yyyy HH:MM format
+    const parts = dateStr.split(' ');
+    const dateParts = parts[0].split('.');
+    return new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+  }
+
+  function parseResult(resultStr) {
+    // Extract numeric value from result string (e.g., "123 s" -> 123, "45 WPM" -> 45)
+    const match = resultStr.match(/(\d+)/);
+    return match ? parseInt(match[1]) : null;
+  }
+
+  function parseResultFilter(filterStr) {
+    // Parse result filter: ">50", "<30", "10-50", or just "50"
+    filterStr = filterStr.trim();
+    if (!filterStr) return null;
+
+    // Range: "10-50"
+    const rangeMatch = filterStr.match(/^(\d+)\s*-\s*(\d+)$/);
+    if (rangeMatch) {
+      return { min: parseInt(rangeMatch[1]), max: parseInt(rangeMatch[2]) };
+    }
+
+    // Greater than: ">50"
+    const gtMatch = filterStr.match(/^>\s*(\d+)$/);
+    if (gtMatch) {
+      return { min: parseInt(gtMatch[1]) + 1, max: null };
+    }
+
+    // Less than: "<50"
+    const ltMatch = filterStr.match(/^<\s*(\d+)$/);
+    if (ltMatch) {
+      return { min: null, max: parseInt(ltMatch[1]) - 1 };
+    }
+
+    // Exact or contains number
+    const numMatch = filterStr.match(/^(\d+)$/);
+    if (numMatch) {
+      return { exact: parseInt(numMatch[1]) };
+    }
+
+    return null;
+  }
+
+  function updateClearButtons() {
+    document.querySelectorAll('.filter-wrapper').forEach(wrapper => {
+      const input = wrapper.querySelector('input, select');
+      if (input.value && input.value !== '') {
+        wrapper.classList.add('has-value');
+      } else {
+        wrapper.classList.remove('has-value');
+      }
+    });
+  }
+
+  function applyFilters() {
+    const dateFilter = filterDate.value ? new Date(filterDate.value) : null;
+    const name = filterName.value.toLowerCase().trim();
+    const email = filterEmail.value.toLowerCase().trim();
+    const exercise = filterExercise.value;
+    const resultFilter = parseResultFilter(filterResult.value);
+
+    let visibleCount = 0;
+    const totalCount = allRows.length;
+
+    allRows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const rowDate = parseDate(cells[0].innerText.trim());
+      const rowName = cells[1].innerText.toLowerCase().trim();
+      const rowEmail = cells[2].innerText.toLowerCase().trim();
+      const rowExercise = cells[3].innerText.trim();
+      const rowResult = parseResult(cells[4].innerText);
+
+      let visible = true;
+
+      // Date filter (matches the selected date)
+      if (dateFilter) {
+        const rowDateOnly = new Date(rowDate.getFullYear(), rowDate.getMonth(), rowDate.getDate());
+        const filterDateOnly = new Date(dateFilter.getFullYear(), dateFilter.getMonth(), dateFilter.getDate());
+        if (rowDateOnly.getTime() !== filterDateOnly.getTime()) {
+          visible = false;
+        }
+      }
+
+      // Name filter
+      if (name && !rowName.includes(name)) {
+        visible = false;
+      }
+
+      // Email filter
+      if (email && !rowEmail.includes(email)) {
+        visible = false;
+      }
+
+      // Exercise filter
+      if (exercise && rowExercise !== exercise) {
+        visible = false;
+      }
+
+      // Result filter
+      if (resultFilter && rowResult !== null) {
+        if (resultFilter.exact !== undefined && rowResult !== resultFilter.exact) {
+          visible = false;
+        }
+        if (resultFilter.min !== null && rowResult < resultFilter.min) {
+          visible = false;
+        }
+        if (resultFilter.max !== null && rowResult > resultFilter.max) {
+          visible = false;
+        }
+      }
+
+      row.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+
+    // Update filter count display
+    const filterCountEl = document.getElementById('filter-count');
+    if (filterCountEl) {
+      if (visibleCount < totalCount) {
+        filterCountEl.textContent = `(${visibleCount}/${totalCount})`;
+      } else {
+        filterCountEl.textContent = '';
+      }
+    }
+
+    updateClearButtons();
+  }
+
+  // Add event listeners for filter inputs
+  [filterDate, filterName, filterEmail, filterExercise, filterResult].forEach(el => {
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
+  });
+
+  // Clear button functionality
+  document.querySelectorAll('.filter-clear-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const inputId = btn.dataset.for;
+      const input = document.getElementById(inputId);
+      if (input.tagName === 'SELECT') {
+        input.value = '';
+      } else {
+        input.value = '';
+      }
+      applyFilters();
+    });
+  });
+
+  // Apply alternating day colors
+  function applyDayColors() {
+    let lastDate = null;
+    let dayIndex = 0;
+
+    allRows.forEach(row => {
+      const cells = row.querySelectorAll('td');
+      const dateText = cells[0].innerText.trim().split(' ')[0]; // Get just the date part (dd.mm.yyyy)
+
+      if (dateText !== lastDate) {
+        if (lastDate !== null) {
+          dayIndex++;
+        }
+        lastDate = dateText;
+      }
+
+      row.classList.remove('day-even', 'day-odd');
+      row.classList.add(dayIndex % 2 === 0 ? 'day-even' : 'day-odd');
+    });
+  }
+
+  applyDayColors();
   </script>

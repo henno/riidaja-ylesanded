@@ -53,7 +53,6 @@ if (!$isAdmin && $activeTab === 'classes') {
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 12px;
         flex-wrap: wrap;
     }
     .period-label {
@@ -90,30 +89,22 @@ if (!$isAdmin && $activeTab === 'classes') {
         color: #666;
         font-weight: 500;
     }
-    .period-presets {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-    .preset-btn {
-        padding: 6px 12px;
-        border: 1px solid #ddd;
+    .period-preset-select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
         border-radius: 4px;
+        font-size: 14px;
         background: white;
-        color: #555;
-        font-size: 13px;
         cursor: pointer;
-        text-decoration: none;
-        transition: all 0.2s ease;
+        min-width: 200px;
     }
-    .preset-btn:hover {
-        background: #f0f0f0;
-        border-color: #bbb;
-    }
-    .preset-btn.active {
-        background: #4CAF50;
-        color: white;
+    .period-preset-select:hover {
         border-color: #4CAF50;
+    }
+    .period-preset-select:focus {
+        outline: none;
+        border-color: #4CAF50;
+        box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
     }
     .student-count {
         margin-left: auto;
@@ -255,15 +246,16 @@ if (!$isAdmin && $activeTab === 'classes') {
                     <input type="date" id="dateTo" class="date-input" value="<?= htmlspecialchars($dateTo) ?>">
                 </div>
             </div>
+            <select id="periodPreset" class="period-preset-select">
+                <option value="" <?= empty($periodPreset) ? 'selected' : '' ?>>-- Vali periood --</option>
+                <option value="today" <?= $periodPreset === 'today' ? 'selected' : '' ?>>Täna</option>
+                <option value="week" <?= $periodPreset === 'week' ? 'selected' : '' ?>>Jooksev nädal</option>
+                <option value="month" <?= $periodPreset === 'month' ? 'selected' : '' ?>>Jooksev kuu</option>
+                <option value="prevmonth" <?= $periodPreset === 'prevmonth' ? 'selected' : '' ?>>Eelmine kuu</option>
+                <option value="prevmonth_to_today" <?= $periodPreset === 'prevmonth_to_today' ? 'selected' : '' ?>>Eelmise kuu algusest tänaseni</option>
+                <option value="prevyear" <?= $periodPreset === 'prevyear' ? 'selected' : '' ?>>Eelmine aasta</option>
+            </select>
             <span class="student-count"><?= count($activeStudents) ?> aktiivset õpilast</span>
-        </div>
-        <div class="period-presets">
-            <button type="button" class="preset-btn <?= $periodPreset === 'today' ? 'active' : '' ?>" data-preset="today">Täna</button>
-            <button type="button" class="preset-btn <?= $periodPreset === 'week' ? 'active' : '' ?>" data-preset="week">Jooksev nädal</button>
-            <button type="button" class="preset-btn <?= $periodPreset === 'month' ? 'active' : '' ?>" data-preset="month">Jooksev kuu</button>
-            <button type="button" class="preset-btn <?= $periodPreset === 'prevmonth' ? 'active' : '' ?>" data-preset="prevmonth">Eelmine kuu</button>
-            <button type="button" class="preset-btn <?= $periodPreset === 'prevmonth_to_today' ? 'active' : '' ?>" data-preset="prevmonth_to_today">Eelmise kuu algusest tänaseni</button>
-            <button type="button" class="preset-btn <?= $periodPreset === 'prevyear' ? 'active' : '' ?>" data-preset="prevyear">Eelmine aasta</button>
         </div>
     </div>
 
@@ -291,6 +283,38 @@ if (!$isAdmin && $activeTab === 'classes') {
                 <th>Email</th>
                 <th>Ülesandeid</th>
                 <th>Aeg</th>
+            </tr>
+            <tr class="filter-row">
+                <td>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-date" placeholder="Otsi...">
+                        <button class="filter-clear-btn" data-for="filter-date">&times;</button>
+                    </div>
+                </td>
+                <td>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-name" placeholder="Otsi...">
+                        <button class="filter-clear-btn" data-for="filter-name">&times;</button>
+                    </div>
+                </td>
+                <td>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-email" placeholder="Otsi...">
+                        <button class="filter-clear-btn" data-for="filter-email">&times;</button>
+                    </div>
+                </td>
+                <td>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-tasks" placeholder="nt: >5">
+                        <button class="filter-clear-btn" data-for="filter-tasks">&times;</button>
+                    </div>
+                </td>
+                <td>
+                    <div class="filter-wrapper">
+                        <input type="text" id="filter-time" placeholder="nt: >10">
+                        <button class="filter-clear-btn" data-for="filter-time">&times;</button>
+                    </div>
+                </td>
             </tr>
         </thead>
         <tbody>
@@ -337,11 +361,178 @@ if (!$isAdmin && $activeTab === 'classes') {
 
         applyDayColors();
 
+        // Table filtering functionality
+        (function() {
+            const filterDate = document.getElementById('filter-date');
+            const filterName = document.getElementById('filter-name');
+            const filterEmail = document.getElementById('filter-email');
+            const filterTasks = document.getElementById('filter-tasks');
+            const filterTime = document.getElementById('filter-time');
+            const tbody = document.querySelector('table tbody');
+            const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+            function parseNumericFilter(filterStr) {
+                filterStr = filterStr.trim();
+                if (!filterStr) return null;
+
+                // Range: "10-50"
+                const rangeMatch = filterStr.match(/^(\d+)\s*-\s*(\d+)$/);
+                if (rangeMatch) {
+                    return { min: parseInt(rangeMatch[1]), max: parseInt(rangeMatch[2]) };
+                }
+
+                // Greater than or equal: ">=50"
+                const gteMatch = filterStr.match(/^>=\s*(\d+)$/);
+                if (gteMatch) {
+                    return { min: parseInt(gteMatch[1]), max: null };
+                }
+
+                // Greater than: ">50"
+                const gtMatch = filterStr.match(/^>\s*(\d+)$/);
+                if (gtMatch) {
+                    return { min: parseInt(gtMatch[1]) + 1, max: null };
+                }
+
+                // Less than or equal: "<=50"
+                const lteMatch = filterStr.match(/^<=\s*(\d+)$/);
+                if (lteMatch) {
+                    return { min: null, max: parseInt(lteMatch[1]) };
+                }
+
+                // Less than: "<50"
+                const ltMatch = filterStr.match(/^<\s*(\d+)$/);
+                if (ltMatch) {
+                    return { min: null, max: parseInt(ltMatch[1]) - 1 };
+                }
+
+                // Exact number
+                const numMatch = filterStr.match(/^(\d+)$/);
+                if (numMatch) {
+                    return { exact: parseInt(numMatch[1]) };
+                }
+
+                return null;
+            }
+
+            function extractNumber(text) {
+                const match = text.match(/(\d+)/);
+                return match ? parseInt(match[1]) : null;
+            }
+
+            function updateClearButtons() {
+                document.querySelectorAll('.filter-wrapper').forEach(wrapper => {
+                    const input = wrapper.querySelector('input');
+                    if (input && input.value && input.value !== '') {
+                        wrapper.classList.add('has-value');
+                    } else {
+                        wrapper.classList.remove('has-value');
+                    }
+                });
+            }
+
+            function applyFilters() {
+                const dateVal = filterDate.value.toLowerCase().trim();
+                const nameVal = filterName.value.toLowerCase().trim();
+                const emailVal = filterEmail.value.toLowerCase().trim();
+                const tasksFilter = parseNumericFilter(filterTasks.value);
+                const timeFilter = parseNumericFilter(filterTime.value);
+
+                let visibleCount = 0;
+
+                allRows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const rowDate = cells[0].innerText.toLowerCase().trim();
+                    const rowName = cells[1].innerText.toLowerCase().trim();
+                    const rowEmail = cells[2].innerText.toLowerCase().trim();
+                    const rowTasks = extractNumber(cells[3].innerText);
+                    const rowTime = extractNumber(cells[4].innerText);
+
+                    let visible = true;
+
+                    // Date filter (text search)
+                    if (dateVal && !rowDate.includes(dateVal)) {
+                        visible = false;
+                    }
+
+                    // Name filter
+                    if (nameVal && !rowName.includes(nameVal)) {
+                        visible = false;
+                    }
+
+                    // Email filter
+                    if (emailVal && !rowEmail.includes(emailVal)) {
+                        visible = false;
+                    }
+
+                    // Tasks filter (numeric)
+                    if (tasksFilter && rowTasks !== null) {
+                        if (tasksFilter.exact !== undefined && rowTasks !== tasksFilter.exact) {
+                            visible = false;
+                        }
+                        if (tasksFilter.min !== null && rowTasks < tasksFilter.min) {
+                            visible = false;
+                        }
+                        if (tasksFilter.max !== null && rowTasks > tasksFilter.max) {
+                            visible = false;
+                        }
+                    }
+
+                    // Time filter (numeric, in minutes)
+                    if (timeFilter && rowTime !== null) {
+                        if (timeFilter.exact !== undefined && rowTime !== timeFilter.exact) {
+                            visible = false;
+                        }
+                        if (timeFilter.min !== null && rowTime < timeFilter.min) {
+                            visible = false;
+                        }
+                        if (timeFilter.max !== null && rowTime > timeFilter.max) {
+                            visible = false;
+                        }
+                    }
+
+                    row.style.display = visible ? '' : 'none';
+                    if (visible) visibleCount++;
+                });
+
+                // Update student count display
+                const countEl = document.querySelector('.student-count');
+                if (countEl) {
+                    const totalCount = allRows.length;
+                    if (visibleCount < totalCount) {
+                        countEl.textContent = visibleCount + '/' + totalCount + ' aktiivset õpilast';
+                    } else {
+                        countEl.textContent = totalCount + ' aktiivset õpilast';
+                    }
+                }
+
+                updateClearButtons();
+                applyDayColors();
+            }
+
+            // Add event listeners
+            [filterDate, filterName, filterEmail, filterTasks, filterTime].forEach(el => {
+                el.addEventListener('input', applyFilters);
+            });
+
+            // Clear button functionality
+            document.querySelectorAll('.filter-clear-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const inputId = btn.dataset.for;
+                    const input = document.getElementById(inputId);
+                    if (input) {
+                        input.value = '';
+                        applyFilters();
+                    }
+                });
+            });
+        })();
+
         // Period filter functionality
         (function() {
             const dateFromInput = document.getElementById('dateFrom');
             const dateToInput = document.getElementById('dateTo');
-            const presetButtons = document.querySelectorAll('.preset-btn');
+            const presetSelect = document.getElementById('periodPreset');
 
             // Calculate preset dates
             function getPresetDates(preset) {
@@ -412,23 +603,25 @@ if (!$isAdmin && $activeTab === 'classes') {
                 window.location.href = '?' + params.toString();
             }
 
-            // Preset button clicks
-            presetButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const preset = this.dataset.preset;
+            // Preset dropdown change
+            presetSelect.addEventListener('change', function() {
+                const preset = this.value;
+                if (preset) {
                     const dates = getPresetDates(preset);
                     if (dates) {
                         navigateWithDates(dates.from, dates.to, preset);
                     }
-                });
+                }
             });
 
             // Date input changes
             dateFromInput.addEventListener('change', function() {
+                presetSelect.value = ''; // Clear preset when manually changing dates
                 navigateWithDates(this.value, dateToInput.value, null);
             });
 
             dateToInput.addEventListener('change', function() {
+                presetSelect.value = ''; // Clear preset when manually changing dates
                 navigateWithDates(dateFromInput.value, this.value, null);
             });
         })();
