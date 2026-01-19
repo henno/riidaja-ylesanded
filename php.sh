@@ -4,7 +4,7 @@ set -e
 
 IMAGE_NAME="riidaja-app"
 CONTAINER_NAME="riidaja-server"
-PORT=8001
+PORT=8000
 
 function composer() {
   docker run --rm \
