@@ -26,14 +26,23 @@ class StudentsModel {
     }
 
     /**
-     * Sync students from results table to students table
-     * This ensures all students who have submitted results are in the students table
+     * Sync students from results and sessions tables to students table
+     * This ensures all students who have submitted results OR started sessions are in the students table
      */
     private function syncStudentsFromResults() {
+        // Sync from results table
         $this->db->query('
             INSERT OR IGNORE INTO students (email, name)
             SELECT DISTINCT email, name
             FROM results
+            WHERE email IS NOT NULL AND name IS NOT NULL
+        ');
+
+        // Also sync from exercise_sessions (includes students with only abandoned sessions)
+        $this->db->query('
+            INSERT OR IGNORE INTO students (email, name)
+            SELECT DISTINCT email, name
+            FROM exercise_sessions
             WHERE email IS NOT NULL AND name IS NOT NULL
         ');
     }
@@ -283,25 +292,56 @@ class StudentsModel {
 
     /**
      * Get active students by date range
+     * Includes both completed results AND session time (including abandoned sessions)
+     * This ensures all time spent is tracked, even if student refreshes the page
      *
      * @param string $dateFrom Start date (Y-m-d format)
      * @param string $dateTo End date (Y-m-d format)
      * @return array Array with date as key and students array as value
      */
     public function getActiveStudentsByDateRange($dateFrom, $dateTo) {
+        // Combined query: get results AND sessions, then merge them
+        // Sessions track ALL time including abandoned attempts (prevents F5 cheating)
         $stmt = $this->db->prepare('
             SELECT
-                date(r.timestamp) as activity_date,
-                r.email,
-                r.name,
-                COUNT(r.id) as result_count,
-                SUM(ABS(r.elapsed)) as total_seconds
-            FROM results r
-            WHERE date(r.timestamp) >= ? AND date(r.timestamp) <= ?
-            GROUP BY date(r.timestamp), r.email, r.name
-            ORDER BY activity_date DESC, r.name ASC
+                activity_date,
+                email,
+                name,
+                SUM(result_count) as result_count,
+                SUM(session_count) as session_count,
+                SUM(total_seconds) as total_seconds
+            FROM (
+                -- Completed results (for counting completed exercises)
+                SELECT
+                    date(r.timestamp) as activity_date,
+                    r.email,
+                    r.name,
+                    COUNT(r.id) as result_count,
+                    0 as session_count,
+                    0 as total_seconds
+                FROM results r
+                WHERE date(r.timestamp) >= ? AND date(r.timestamp) <= ?
+                GROUP BY date(r.timestamp), r.email, r.name
+
+                UNION ALL
+
+                -- All sessions (for tracking total time including abandoned)
+                SELECT
+                    date(s.started_at) as activity_date,
+                    s.email,
+                    s.name,
+                    0 as result_count,
+                    COUNT(s.id) as session_count,
+                    COALESCE(SUM(s.duration_seconds), 0) as total_seconds
+                FROM exercise_sessions s
+                WHERE date(s.started_at) >= ? AND date(s.started_at) <= ?
+                  AND s.duration_seconds IS NOT NULL
+                GROUP BY date(s.started_at), s.email, s.name
+            ) combined
+            GROUP BY activity_date, email, name
+            ORDER BY activity_date DESC, name ASC
         ');
-        $stmt->execute([$dateFrom, $dateTo]);
+        $stmt->execute([$dateFrom, $dateTo, $dateFrom, $dateTo]);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Group by date
