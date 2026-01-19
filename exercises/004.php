@@ -113,6 +113,7 @@
 
     let startTime = null;
     let timerInterval = null;
+    let sessionTracker = null;
     let originalText = '';
     let lastFirstErrorPos = -1;
     let debounceTimeout = null;
@@ -304,6 +305,15 @@ Kuna Anna aktsepteeris valminud funktsionaalsuse ja see moodustab osa kokkulepit
         if (startTime === null) {
             startTime = Date.now();
             timerInterval = setInterval(updateTimer, 50);
+            // Start session tracking
+            if (window.SessionTracker && window.RIIDAJA_USER) {
+                sessionTracker = new SessionTracker(
+                    window.RIIDAJA_USER.email,
+                    window.RIIDAJA_USER.name,
+                    '004'
+                );
+                sessionTracker.start();
+            }
         }
 
         // Clear previous debounce
@@ -321,6 +331,8 @@ Kuna Anna aktsepteeris valminud funktsionaalsuse ja see moodustab osa kokkulepit
                 correctionTextarea.classList.add('correct');
 
                 clearInterval(timerInterval);
+                // Mark session as complete (success)
+                if (sessionTracker) sessionTracker.complete();
                 const elapsed = (Date.now() - startTime) / 1000;
                 timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
 
@@ -346,6 +358,8 @@ Kuna Anna aktsepteeris valminud funktsionaalsuse ja see moodustab osa kokkulepit
         timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
         if (elapsed >= 60) {
             clearInterval(timerInterval);
+            // Mark session as complete (failed)
+            if (sessionTracker) sessionTracker.complete();
             // Save failed attempt with negative elapsed time
             fetch('save_result.php', {
                 method: 'POST',

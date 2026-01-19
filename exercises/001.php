@@ -131,11 +131,21 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
         let startTime     = null;
         let timerInterval = null;
         let bestRate      = 0;
+        let sessionTracker = null;
 
         function handleInput() {
             if (startTime === null) {
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimer, 50);
+                // Start session tracking
+                if (window.SessionTracker && window.RIIDAJA_USER) {
+                    sessionTracker = new SessionTracker(
+                        window.RIIDAJA_USER.email,
+                        window.RIIDAJA_USER.name,
+                        '<?= $exerciseId ?>'
+                    );
+                    sessionTracker.start();
+                }
             }
 
             let completed  = 0;
@@ -191,6 +201,8 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
 
             if (elapsed >= targetTime) {
                 clearInterval(timerInterval);
+                // Mark session as complete (failed)
+                if (sessionTracker) sessionTracker.complete();
                 // Save failed attempt with negative elapsed time
                 fetch('save_result.php', {
                     method:  'POST',
@@ -210,6 +222,9 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
             clearInterval(timerInterval);
             const elapsed = (Date.now() - startTime) / 1000;
             timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
+
+            // Mark session as complete (success)
+            if (sessionTracker) sessionTracker.complete();
 
             fetch('save_result.php', {
                 method:  'POST',

@@ -159,6 +159,15 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
     <!-- Bootstrap CSS and JS with Popper.js -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Session tracker for exercise time tracking -->
+    <script src="js/session-tracker.js"></script>
+    <script>
+        // User data for session tracking
+        window.RIIDAJA_USER = {
+            email: <?= json_encode($_SESSION['user']['email'] ?? '') ?>,
+            name: <?= json_encode($_SESSION['user']['name'] ?? '') ?>
+        };
+    </script>
     <script>
         // Clean up URL in browser address bar if it contains authentication parameters
         if (window.location.href.includes('code=') || window.location.href.includes('state=') || window.location.href.includes('session_state=')) {
@@ -225,9 +234,7 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
         <strong><?php echo htmlspecialchars($_SESSION['user']['name'] ?? ''); ?></strong>
         <a href="?page=tasks">Ülesanded</a>
         <a href="?page=results">Tulemused</a>
-        <?php if ($isAdmin): ?>
-            <a href="?page=students">Õpilased</a>
-        <?php endif; ?>
+        <a href="?page=students">Õpilased</a>
     </div>
     <div class="nav-right">
         <a href="?logout=1">Logi välja</a>

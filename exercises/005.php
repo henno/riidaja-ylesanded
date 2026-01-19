@@ -117,6 +117,7 @@
     let lastFirstErrorPos = -1;
     let debounceTimeout = null;
     let currentProgressPercent = 0;
+    let sessionTracker = null;
 
     // Text pairs: original and corrupted version
     // NB: Extra words must NEVER be at the beginning of a sentence (capitalization issue)
@@ -252,6 +253,15 @@
         if (startTime === null) {
             startTime = Date.now();
             timerInterval = setInterval(updateTimer, 50);
+            // Start session tracking
+            if (window.SessionTracker && window.RIIDAJA_USER) {
+                sessionTracker = new SessionTracker(
+                    window.RIIDAJA_USER.email,
+                    window.RIIDAJA_USER.name,
+                    '005'
+                );
+                sessionTracker.start();
+            }
         }
 
         // Clear previous debounce
@@ -269,6 +279,8 @@
                 correctionTextarea.classList.add('correct');
 
                 clearInterval(timerInterval);
+                // Mark session as complete (success)
+                if (sessionTracker) sessionTracker.complete();
                 const elapsed = (Date.now() - startTime) / 1000;
                 timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
 
@@ -294,6 +306,8 @@
         timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
         if (elapsed >= 60) {
             clearInterval(timerInterval);
+            // Mark session as complete (failed)
+            if (sessionTracker) sessionTracker.complete();
             // Save failed attempt with negative elapsed time and progress percentage
             fetch('save_result.php', {
                 method: 'POST',

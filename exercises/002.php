@@ -57,6 +57,7 @@ const tableBody    = document.querySelector('#sentence-table tbody');
 const timerDisplay = document.getElementById('timer');
 let startTime      = null;
 let timerInterval  = null;
+let sessionTracker = null;
 const textareas    = [];
 const rows         = 12;
 
@@ -130,6 +131,15 @@ function handleInput() {
   if (startTime === null) {
     startTime = Date.now();
     timerInterval = setInterval(updateTimer, 50);
+    // Start session tracking
+    if (window.SessionTracker && window.RIIDAJA_USER) {
+      sessionTracker = new SessionTracker(
+        window.RIIDAJA_USER.email,
+        window.RIIDAJA_USER.name,
+        '<?php echo htmlspecialchars($_GET["task"] ?? "002"); ?>'
+      );
+      sessionTracker.start();
+    }
   }
   
   let allCorrect = true;
@@ -160,6 +170,8 @@ function handleInput() {
   
   if (allCorrect) {
     clearInterval(timerInterval);
+    // Mark session as complete (success)
+    if (sessionTracker) sessionTracker.complete();
     const elapsed = (Date.now() - startTime) / 1000;
     timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
     fetch('save_result.php', {
@@ -178,6 +190,8 @@ function updateTimer() {
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
   if (elapsed >= 55) {
     clearInterval(timerInterval);
+    // Mark session as complete (failed)
+    if (sessionTracker) sessionTracker.complete();
     // Save failed attempt with negative elapsed time
     fetch('save_result.php', {
       method: 'POST',

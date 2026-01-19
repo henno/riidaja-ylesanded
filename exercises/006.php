@@ -317,6 +317,7 @@
     let startTime = null;
     let isTestActive = false;
     let timerInterval = null;
+    let sessionTracker = null;
 
     const textDisplay = document.getElementById('text-display');
     const typingInput = document.getElementById('typing-input');
@@ -373,6 +374,15 @@
             isTestActive = true;
             startTime = Date.now();
             timerInterval = setInterval(updateStats, 100);
+            // Start session tracking
+            if (window.SessionTracker && window.RIIDAJA_USER) {
+                sessionTracker = new SessionTracker(
+                    window.RIIDAJA_USER.email,
+                    window.RIIDAJA_USER.name,
+                    '006'
+                );
+                sessionTracker.start();
+            }
         }
     }
 
@@ -426,6 +436,8 @@
     function endTest() {
         isTestActive = false;
         clearInterval(timerInterval);
+        // Mark session as complete
+        if (sessionTracker) sessionTracker.complete();
 
         const elapsedSeconds = Math.min((Date.now() - startTime) / 1000, TIME_LIMIT);
         const minutes = elapsedSeconds / 60;
