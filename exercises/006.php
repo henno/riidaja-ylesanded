@@ -22,15 +22,15 @@
         white-space: pre-wrap;
         font-family: monospace;
         font-size: 18px;
-        line-height: 1.8;
+        line-height: 2.5;
         text-align: left;
         height: 100%;
-        overflow: auto;
+        overflow: visible;
         user-select: none;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
-        padding: 8px;
+        padding: 40px 8px 8px 8px;
         box-sizing: border-box;
     }
     .typing-input {
@@ -43,6 +43,7 @@
     }
     .letter {
         position: relative;
+        overflow: visible !important;
     }
     .letter.correct {
         color: #4CAF50;
@@ -50,6 +51,37 @@
     .letter.incorrect {
         color: #f44336;
         background: #ffebee;
+    }
+    .wrong-key-bubble {
+        position: absolute;
+        bottom: calc(100% + 5px);
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #ffb6c1 !important;
+        color: #000000 !important;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 18px !important;
+        font-weight: bold;
+        white-space: nowrap;
+        z-index: 1000;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        line-height: 1;
+        display: block;
+        min-width: 20px;
+        min-height: 20px;
+        text-align: center;
+        overflow: visible !important;
+    }
+    .wrong-key-bubble::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: #ffb6c1 transparent transparent transparent;
     }
     .letter.current {
         background: #2196F3;
@@ -369,6 +401,22 @@
         }
     }
 
+    // Show a pink speech bubble above the letter with the wrong key that was pressed
+    function showWrongKeyBubble(letterElement, wrongChar) {
+        // Remove any existing bubble from this letter
+        const existingBubble = letterElement.querySelector('.wrong-key-bubble');
+        if (existingBubble) {
+            existingBubble.remove();
+        }
+
+        // Create the bubble
+        const bubble = document.createElement('span');
+        bubble.className = 'wrong-key-bubble';
+        // Show the character, or "space" if it's a space
+        bubble.textContent = wrongChar === ' ' ? '␣' : wrongChar;
+        letterElement.appendChild(bubble);
+    }
+
     function startTest() {
         if (!isTestActive) {
             isTestActive = true;
@@ -562,8 +610,10 @@
                     if (currentLetter.classList.contains('correct') || currentLetter.classList.contains('incorrect')) {
                         totalChars--;
                     }
-                    // Remove styling
+                    // Remove styling and bubble
                     currentLetter.classList.remove('correct', 'incorrect');
+                    const bubble = currentLetter.querySelector('.wrong-key-bubble');
+                    if (bubble) bubble.remove();
                 }
             }
 
@@ -595,6 +645,8 @@
         } else {
             currentLetter.classList.add('incorrect');
             errors++;
+            // Show speech bubble with the wrong key pressed
+            showWrongKeyBubble(currentLetter, typedChar);
         }
 
         currentLetterIndex++;
