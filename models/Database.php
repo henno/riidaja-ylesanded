@@ -150,7 +150,12 @@ class Database
         $content = file_get_contents($filePath);
         $targetTime = self::DEFAULT_TARGET_TIME;
 
-        if (preg_match('/elapsed >= (\d+)/', $content, $matches) ||
+        // For WPM-based exercises, extract REQUIRED_WPM
+        if (preg_match('/REQUIRED_WPM\s*=\s*(\d+)/', $content, $matches)) {
+            $targetTime = (int)$matches[1];
+        }
+        // For time-based exercises, extract time limit
+        elseif (preg_match('/elapsed >= (\d+)/', $content, $matches) ||
             preg_match('/aega (\d+) sekundit/', $content, $matches)) {
             $targetTime = (int)$matches[1];
         }
