@@ -52,28 +52,28 @@
         color: #f44336;
         background: #ffebee;
     }
-    .wrong-key-bubble {
+    .floating-error-bubble {
         position: absolute;
-        bottom: calc(100% + 5px);
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: #ffb6c1 !important;
-        color: #000000 !important;
+        background-color: #ffb6c1;
+        color: #000000;
         padding: 6px 10px;
         border-radius: 6px;
-        font-size: 18px !important;
+        font-size: 18px;
         font-weight: bold;
         white-space: nowrap;
         z-index: 1000;
         box-shadow: 0 2px 6px rgba(0,0,0,0.4);
         line-height: 1;
-        display: block;
         min-width: 20px;
         min-height: 20px;
         text-align: center;
-        overflow: visible !important;
+        display: none;
+        pointer-events: none;
     }
-    .wrong-key-bubble::after {
+    .floating-error-bubble.visible {
+        display: block;
+    }
+    .floating-error-bubble::after {
         content: '';
         position: absolute;
         top: 100%;
@@ -240,7 +240,10 @@
         </thead>
         <tbody>
         <tr>
-            <td><div id="text-display" class="text-display" tabindex="0"></div></td>
+            <td>
+                <div id="text-display" class="text-display" tabindex="0"></div>
+                <div id="error-bubble" class="floating-error-bubble"></div>
+            </td>
         </tr>
         </tbody>
     </table>
@@ -358,6 +361,8 @@
     const accuracyDisplay = document.getElementById('accuracy-display');
     const errorsDisplay = document.getElementById('errors-display');
     const requirementsDisplay = document.getElementById('requirements');
+    const errorBubble = document.getElementById('error-bubble');
+    let accumulatedErrors = '';
 
     function initializeTest() {
         textDisplay.innerHTML = '';
@@ -401,20 +406,30 @@
         }
     }
 
-    // Show a pink speech bubble above the letter with the wrong key that was pressed
+    // Show floating error bubble above current letter
     function showWrongKeyBubble(letterElement, wrongChar) {
-        // Remove any existing bubble from this letter
-        const existingBubble = letterElement.querySelector('.wrong-key-bubble');
-        if (existingBubble) {
-            existingBubble.remove();
-        }
+        const displayChar = wrongChar === ' ' ? '␣' : wrongChar;
+        accumulatedErrors += displayChar;
+        updateErrorBubble(letterElement);
+    }
 
-        // Create the bubble
-        const bubble = document.createElement('span');
-        bubble.className = 'wrong-key-bubble';
-        // Show the character, or "space" if it's a space
-        bubble.textContent = wrongChar === ' ' ? '␣' : wrongChar;
-        letterElement.appendChild(bubble);
+    function updateErrorBubble(letterElement) {
+        if (accumulatedErrors.length > 0 && letterElement) {
+            const rect = letterElement.getBoundingClientRect();
+            const containerRect = textDisplay.getBoundingClientRect();
+            errorBubble.textContent = accumulatedErrors;
+            errorBubble.style.left = (rect.left - containerRect.left + rect.width / 2) + 'px';
+            errorBubble.style.top = (rect.top - containerRect.top - 35) + 'px';
+            errorBubble.style.transform = 'translateX(-50%)';
+            errorBubble.classList.add('visible');
+        } else {
+            errorBubble.classList.remove('visible');
+        }
+    }
+
+    function clearErrorBubble() {
+        accumulatedErrors = '';
+        errorBubble.classList.remove('visible');
     }
 
     function startTest() {
@@ -610,12 +625,13 @@
                     if (currentLetter.classList.contains('correct') || currentLetter.classList.contains('incorrect')) {
                         totalChars--;
                     }
-                    // Remove styling and bubble
+                    // Remove styling
                     currentLetter.classList.remove('correct', 'incorrect');
-                    const bubble = currentLetter.querySelector('.wrong-key-bubble');
-                    if (bubble) bubble.remove();
                 }
             }
+
+            // Clear the floating error bubble
+            clearErrorBubble();
 
             updateCurrentLetter();
             updateStats();
@@ -637,6 +653,7 @@
         if (!currentLetter) return;
 
         const expectedChar = currentLetter.textContent;
+
         totalChars++;
 
         if (typedChar === expectedChar) {
