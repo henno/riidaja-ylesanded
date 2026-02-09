@@ -91,18 +91,24 @@
         opacity: 0;
         pointer-events: none;
     }
-    .mouse-warning {
+    .mouse-warning, .typing-warning {
         position: fixed;
-        top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: #ff9800;
         color: white;
         padding: 10px 20px;
         border-radius: 5px;
         z-index: 1000;
         font-weight: bold;
         display: none;
+    }
+    .mouse-warning {
+        top: 20px;
+        background: #ff9800;
+    }
+    .typing-warning {
+        top: 70px;
+        background: #e91e63;
     }
 </style>
 
@@ -119,6 +125,7 @@ if (/Mac/i.test(navigator.platform)) {
 
 <div class="mouse-warning" id="mouse-warning">Hiir on keelatud! Kasuta klaviatuuri.</div>
 <div class="help-bubble hidden" id="help-bubble"></div>
+<div class="typing-warning" id="typing-warning">Kasuta teksti ümberkirjutamise asemel teksti lõikamist ja kleepimist</div>
 
 <form id="task-form">
     <table id="sentence-table">
@@ -139,6 +146,7 @@ if (/Mac/i.test(navigator.platform)) {
 const tableBody = document.querySelector('#sentence-table tbody');
 const timerDisplay = document.getElementById('timer');
 const mouseWarning = document.getElementById('mouse-warning');
+const typingWarning = document.getElementById('typing-warning');
 let startTime = null;
 let timerInterval = null;
 let sessionTracker = null;
@@ -194,6 +202,7 @@ sentences.forEach((sentence, i) => {
         ta.addEventListener('contextmenu', blockMouse);
     });
 
+    answerTextarea.addEventListener('beforeinput', blockTyping);
     answerTextarea.addEventListener('input', handleInput);
 
     textareas.push(answerTextarea);
@@ -208,6 +217,19 @@ function blockMouse(e) {
     mouseWarningTimeout = setTimeout(() => {
         mouseWarning.style.display = 'none';
     }, 2000);
+}
+
+let typingWarningTimeout = null;
+function blockTyping(e) {
+    // Blokeeri ainult käsitsi tippimine, luba kleepimine, lõikamine, kustutamine, nooled jne
+    if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText') {
+        e.preventDefault();
+        typingWarning.style.display = 'block';
+        clearTimeout(typingWarningTimeout);
+        typingWarningTimeout = setTimeout(() => {
+            typingWarning.style.display = 'none';
+        }, 3000);
+    }
 }
 
 // Taimer käivitub ainult Tab klahvi vajutamisel
