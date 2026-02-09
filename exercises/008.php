@@ -221,8 +221,8 @@ function blockMouse(e) {
 
 let typingWarningTimeout = null;
 function blockTyping(e) {
-    // Blokeeri ainult käsitsi tippimine, luba kleepimine, lõikamine, kustutamine, nooled jne
-    if (e.inputType === 'insertText' || e.inputType === 'insertCompositionText') {
+    // Blokeeri käsitsi tippimine, luba tühik (sõnade eraldamiseks), kleepimine, lõikamine, kustutamine, nooled jne
+    if ((e.inputType === 'insertText' || e.inputType === 'insertCompositionText') && e.data !== ' ') {
         e.preventDefault();
         typingWarning.style.display = 'block';
         clearTimeout(typingWarningTimeout);
