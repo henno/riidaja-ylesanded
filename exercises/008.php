@@ -60,6 +60,37 @@
         margin-left: auto;
         margin-right: auto;
     }
+    .help-bubble {
+        position: absolute;
+        background: #4A90D9;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: bold;
+        white-space: nowrap;
+        z-index: 100;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateX(-50%);
+        transition: opacity 0.3s, top 0.3s, left 0.3s;
+    }
+    .help-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #4A90D9;
+    }
+    .help-bubble.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
     .mouse-warning {
         position: fixed;
         top: 20px;
@@ -75,9 +106,19 @@
     }
 </style>
 
-<p>Kopeeri alglause vastuse lahtrisse ja muuda sõnade järjekord õigeks. Kasuta ainult klaviatuuri! Otseteed: Tab (liigu väljade vahel), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna), Ctrl+X (lõika). Sul on aega 120 sekundit.</p>
+<p id="instructions">Kopeeri alglause vastuse lahtrisse ja muuda sõnade järjekord õigeks. Kasuta ainult klaviatuuri! Otseteed: Tab (liigu väljade vahel), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna), Ctrl+X (lõika). Sul on aega 120 sekundit.</p>
+<script>
+// macOS: näita ⌘/⌥ sümboleid juhendi tekstis
+if (/Mac/i.test(navigator.platform)) {
+    const p = document.getElementById('instructions');
+    p.innerHTML = p.innerHTML
+        .replace('Ctrl+Shift+nooled', '⌥+Shift+nooled')
+        .replace(/Ctrl\+/g, '⌘+');
+}
+</script>
 
 <div class="mouse-warning" id="mouse-warning">Hiir on keelatud! Kasuta klaviatuuri.</div>
+<div class="help-bubble hidden" id="help-bubble"></div>
 
 <form id="task-form">
     <table id="sentence-table">
@@ -254,6 +295,143 @@ function updateTimer() {
     }
 }
 
-// Fookus esimesele alglausele
+// --- Interaktiivne help bubble juhend (esimesed 3 rida) ---
+const helpBubble = document.getElementById('help-bubble');
+let guideRow = 0;
+let guideStep = 0;
+let bubbleTimeout = null;
+
+// macOS tuvastamine — nooleklahvide sõna-haaval liigutamine kasutab Option (Alt) klahvi
+const isMac = /Mac/i.test(navigator.platform);
+
+// Platvormi-spetsiifiline sildi kuvamine
+function getStepLabel(step) {
+    if (!isMac) return step.label;
+    const isArrow = step.key.startsWith('Arrow');
+    // macOS: nooleklahvidega sõna-haaval → ⌥, muu (kopeeri/kleebi/lõika) → ⌘
+    return step.label
+        .replace('Ctrl+Shift+', isArrow ? '⌥+Shift+' : '⌘+Shift+')
+        .replace('Ctrl+', isArrow ? '⌥+' : '⌘+');
+}
+
+// Iga rea täielik töövoog koos sõnade ümbertõstmisega
+const guideSequences = [
+    // Rida 1: "Väike koer jooksis poole õue" → "Väike koer jooksis õue poole"
+    // Viimased 2 sõna vahetada kohad
+    [
+        { label: 'Ctrl+A',         key: 'a',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Ctrl+C',         key: 'c',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Tab',            key: 'Tab',        ctrl: false, shift: false, target: 'source' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+Shift+←',   key: 'ArrowLeft',  ctrl: true,  shift: true,  target: 'answer' },
+        { label: 'Ctrl+X',         key: 'x',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+←',         key: 'ArrowLeft',  ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Tühik',          key: ' ',          ctrl: false, shift: false, target: 'answer' },
+        { label: 'Tab',            key: 'Tab',        ctrl: false, shift: false, target: 'answer' }
+    ],
+    // Rida 2: "Täna on taevas ilus väga" → "Täna on taevas väga ilus"
+    // Sama muster (viimased 2 sõna vahetada)
+    [
+        { label: 'Ctrl+A',         key: 'a',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Ctrl+C',         key: 'c',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Tab',            key: 'Tab',        ctrl: false, shift: false, target: 'source' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+Shift+←',   key: 'ArrowLeft',  ctrl: true,  shift: true,  target: 'answer' },
+        { label: 'Ctrl+X',         key: 'x',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+←',         key: 'ArrowLeft',  ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Tühik',          key: ' ',          ctrl: false, shift: false, target: 'answer' },
+        { label: 'Tab',            key: 'Tab',        ctrl: false, shift: false, target: 'answer' }
+    ],
+    // Rida 3: "Ma lähen hommikul kooli iga päev" → "Ma lähen iga päev hommikul kooli"
+    // "iga päev" tuleb tõsta "hommikul" ette (2 sõna valida, 2 sõna üle hüpata)
+    [
+        { label: 'Ctrl+A',         key: 'a',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Ctrl+C',         key: 'c',          ctrl: true,  shift: false, target: 'source' },
+        { label: 'Tab',            key: 'Tab',        ctrl: false, shift: false, target: 'source' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+Shift+←',   key: 'ArrowLeft',  ctrl: true,  shift: true,  target: 'answer' },
+        { label: 'Ctrl+Shift+←',   key: 'ArrowLeft',  ctrl: true,  shift: true,  target: 'answer' },
+        { label: 'Ctrl+X',         key: 'x',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+←',         key: 'ArrowLeft',  ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+←',         key: 'ArrowLeft',  ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Ctrl+V',         key: 'v',          ctrl: true,  shift: false, target: 'answer' },
+        { label: 'Tühik',          key: ' ',          ctrl: false, shift: false, target: 'answer' }
+    ]
+];
+
+function getGuideTarget() {
+    if (guideRow >= guideSequences.length) return null;
+    const row = tableBody.rows[guideRow];
+    if (!row) return null;
+    const step = guideSequences[guideRow][guideStep];
+    return step.target === 'answer'
+        ? row.querySelector('.answer-textarea')
+        : row.querySelector('.source-textarea');
+}
+
+function positionBubble() {
+    if (guideRow >= guideSequences.length) {
+        helpBubble.classList.add('hidden');
+        return;
+    }
+    const target = getGuideTarget();
+    if (!target) return;
+
+    const step = guideSequences[guideRow][guideStep];
+    const rect = target.getBoundingClientRect();
+    helpBubble.textContent = getStepLabel(step);
+    helpBubble.style.left = (rect.left + rect.width / 2 + window.scrollX) + 'px';
+    helpBubble.style.top = (rect.top + window.scrollY - 40) + 'px';
+    helpBubble.classList.remove('hidden');
+}
+
+// Repositsioneeri mull (scrollimisel/resize'il) ilma fade-in viiteta
+function repositionBubble() {
+    if (guideRow >= guideSequences.length) return;
+    if (helpBubble.classList.contains('hidden')) return;
+    const target = getGuideTarget();
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    helpBubble.style.left = (rect.left + rect.width / 2 + window.scrollX) + 'px';
+    helpBubble.style.top = (rect.top + window.scrollY - 40) + 'px';
+}
+
+// Näita mulli 500ms viitega (fade-in), et kasutajal oleks aega ise mõelda
+function showBubbleDelayed() {
+    helpBubble.classList.add('hidden');
+    clearTimeout(bubbleTimeout);
+    bubbleTimeout = setTimeout(positionBubble, 1000);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (guideRow >= guideSequences.length) return;
+    const steps = guideSequences[guideRow];
+    const step = steps[guideStep];
+
+    const keyMatch = e.key === step.key || e.key.toLowerCase() === step.key;
+    // macOS: nooleklahvide sõna-haaval liigutamine kasutab Option (altKey)
+    const isArrow = step.key.startsWith('Arrow');
+    const ctrlOk = step.ctrl
+        ? (e.ctrlKey || e.metaKey || (isArrow && e.altKey))
+        : !(e.ctrlKey || e.metaKey);
+    const shiftOk = step.shift ? e.shiftKey : !e.shiftKey;
+
+    if (keyMatch && ctrlOk && shiftOk) {
+        guideStep++;
+        if (guideStep >= steps.length) {
+            guideStep = 0;
+            guideRow++;
+        }
+        showBubbleDelayed();
+    }
+});
+
+window.addEventListener('scroll', repositionBubble);
+window.addEventListener('resize', repositionBubble);
+
+// Fookus esimesele alglausele ja näita esimest vihjet
 document.querySelector('.source-textarea').focus();
+showBubbleDelayed();
 </script>
