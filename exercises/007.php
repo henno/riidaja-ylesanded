@@ -659,6 +659,7 @@
         if (typedChar === expectedChar) {
             currentLetter.classList.add('correct');
             correctChars++;
+            clearErrorBubble();
         } else {
             currentLetter.classList.add('incorrect');
             errors++;
