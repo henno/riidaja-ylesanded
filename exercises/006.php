@@ -363,6 +363,7 @@
     const requirementsDisplay = document.getElementById('requirements');
     const errorBubble = document.getElementById('error-bubble');
     let accumulatedErrors = '';
+    let errorBubbleWordIndex = -1;
 
     function initializeTest() {
         textDisplay.innerHTML = '';
@@ -407,7 +408,11 @@
     }
 
     // Show floating error bubble above current letter
-    function showWrongKeyBubble(letterElement, wrongChar) {
+    function showWrongKeyBubble(letterElement, wrongChar, wordIndex) {
+        if (wordIndex !== errorBubbleWordIndex) {
+            accumulatedErrors = '';
+            errorBubbleWordIndex = wordIndex;
+        }
         const displayChar = wrongChar === ' ' ? '␣' : wrongChar;
         accumulatedErrors += displayChar;
         updateErrorBubble(letterElement);
@@ -429,6 +434,7 @@
 
     function clearErrorBubble() {
         accumulatedErrors = '';
+        errorBubbleWordIndex = -1;
         errorBubble.classList.remove('visible');
     }
 
@@ -659,12 +665,11 @@
         if (typedChar === expectedChar) {
             currentLetter.classList.add('correct');
             correctChars++;
-            clearErrorBubble();
         } else {
             currentLetter.classList.add('incorrect');
             errors++;
             // Show speech bubble with the wrong key pressed
-            showWrongKeyBubble(currentLetter, typedChar);
+            showWrongKeyBubble(currentLetter, typedChar, currentWordIndex);
         }
 
         currentLetterIndex++;
