@@ -72,6 +72,11 @@ function completionClass($cnt): string
     .warning-icon{color:#ffc107;margin-right:5px;font-size:1em}
     th{background:#f0f0f0}
     .student-header + table{margin-top:0;border-top:none}
+    .student-grade-table{table-layout:fixed;width:100%}
+    .student-grade-table th:first-child,
+    .student-grade-table td:first-child{width:30px}
+    .student-grade-table th:nth-child(2),
+    .student-grade-table td:nth-child(2){width:180px}
 </style>
 
 <?php if ($isExerciseTab): ?>
@@ -193,7 +198,7 @@ function completionClass($cnt): string
                 if ($best[$id] === INF || $best[$id] === 0) $best[$id] = null;
             }
             ?>
-            <table>
+            <table class="student-grade-table">
                 <thead><tr><th>#</th><th><?= h($grade) ?></th><?php foreach ($allExercises as $ex){
                         $id = $ex['id'];
                         $unit = ($ex['result_type'] === 'wpm') ? ' WPM' : ' s';
