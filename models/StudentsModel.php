@@ -357,6 +357,73 @@ class StudentsModel {
     }
 
     /**
+     * Get all classes sorted by sort_order
+     *
+     * @return array Array of classes with id, name, sort_order
+     */
+    public function getAllClasses() {
+        $stmt = $this->db->query('SELECT id, name, sort_order FROM classes ORDER BY sort_order, name');
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get all class names as a flat array
+     *
+     * @return array Array of class name strings
+     */
+    public function getAllClassNames() {
+        $stmt = $this->db->query('SELECT name FROM classes ORDER BY sort_order, name');
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Add a new class
+     *
+     * @param string $name Class name
+     * @return bool Success status
+     */
+    public function addClass($name) {
+        try {
+            // Get max sort_order
+            $stmt = $this->db->query('SELECT COALESCE(MAX(sort_order), 0) + 1 FROM classes');
+            $nextOrder = $stmt->fetchColumn();
+
+            $stmt = $this->db->prepare('INSERT INTO classes (name, sort_order) VALUES (?, ?)');
+            return $stmt->execute([$name, $nextOrder]);
+        } catch (Exception $e) {
+            error_log("Error adding class: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Delete a class and remove it from students
+     *
+     * @param string $name Class name
+     * @return bool Success status
+     */
+    public function deleteClass($name) {
+        try {
+            $this->db->beginTransaction();
+
+            // Remove this class from students who have it
+            $stmt = $this->db->prepare('UPDATE students SET grade = NULL WHERE grade = ?');
+            $stmt->execute([$name]);
+
+            // Delete the class
+            $stmt = $this->db->prepare('DELETE FROM classes WHERE name = ?');
+            $stmt->execute([$name]);
+
+            $this->db->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->db->rollBack();
+            error_log("Error deleting class: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Calculate preset date ranges
      *
      * @param string $preset Preset name (today, week, month, prevmonth, prevmonth_to_today, prevyear)

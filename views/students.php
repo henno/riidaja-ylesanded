@@ -221,6 +221,72 @@ if (!$isAdmin && $activeTab === 'classes') {
     .save-status.success { color: #28a745; }
     .save-status.error { color: #dc3545; }
     .save-status.saving { color: #007bff; }
+    .class-management {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid #e0e0e0;
+    }
+    .class-management h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+    }
+    .class-add-form {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+    }
+    .class-add-form input {
+        padding: 6px 10px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    .class-add-form button {
+        padding: 6px 16px;
+        background: #4CAF50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+    }
+    .class-add-form button:hover {
+        background: #45a049;
+    }
+    .class-list {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .class-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 4px 10px;
+        font-size: 14px;
+    }
+    .class-tag .delete-class-btn {
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0 2px;
+        line-height: 1;
+    }
+    .class-tag .delete-class-btn:hover {
+        color: #a71d2a;
+    }
+    .class-status {
+        font-size: 13px;
+        margin-left: 10px;
+    }
 </style>
 
 <h2>Õpilased</h2>
@@ -631,6 +697,24 @@ if (!$isAdmin && $activeTab === 'classes') {
     <!-- Classes Tab -->
     <h3>Õpilaste klassid</h3>
 
+    <!-- Class management -->
+    <div class="class-management">
+        <h4>Klasside haldamine</h4>
+        <div class="class-add-form">
+            <input type="text" id="new-class-name" placeholder="Uue klassi nimi" maxlength="20">
+            <button id="add-class-btn">Lisa klass</button>
+            <span class="class-status" id="class-status"></span>
+        </div>
+        <div class="class-list" id="class-list">
+            <?php foreach ($classes as $class): ?>
+                <span class="class-tag" data-name="<?= htmlspecialchars($class['name']) ?>">
+                    <?= htmlspecialchars($class['name']) ?>
+                    <button class="delete-class-btn" title="Kustuta klass">&times;</button>
+                </span>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
     <?php if (empty($students)): ?>
         <p>Ühtegi õpilast pole veel tulemusi esitanud.</p>
     <?php else: ?>
@@ -672,9 +756,9 @@ if (!$isAdmin && $activeTab === 'classes') {
                                 id="grade-<?= htmlspecialchars($student['email']) ?>"
                             >
                                 <option value="">-- Vali klass --</option>
-                                <option value="5r" <?= $student['grade'] === '5r' ? 'selected' : '' ?>>5r</option>
-                                <option value="7r" <?= $student['grade'] === '7r' ? 'selected' : '' ?>>7r</option>
-                                <option value="8r" <?= $student['grade'] === '8r' ? 'selected' : '' ?>>8r</option>
+                                <?php foreach ($classes as $class): ?>
+                                    <option value="<?= htmlspecialchars($class['name']) ?>" <?= $student['grade'] === $class['name'] ? 'selected' : '' ?>><?= htmlspecialchars($class['name']) ?></option>
+                                <?php endforeach; ?>
                             </select>
                             <span class="save-status" id="status-<?= htmlspecialchars($student['email']) ?>"></span>
                         </td>
@@ -686,6 +770,7 @@ if (!$isAdmin && $activeTab === 'classes') {
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Grade select change handlers
         const gradeSelects = document.querySelectorAll('.grade-select');
 
         gradeSelects.forEach(select => {
@@ -728,6 +813,71 @@ if (!$isAdmin && $activeTab === 'classes') {
                 });
             });
         });
+
+        // Class management handlers
+        const addBtn = document.getElementById('add-class-btn');
+        const nameInput = document.getElementById('new-class-name');
+        const classList = document.getElementById('class-list');
+        const classStatus = document.getElementById('class-status');
+
+        function showClassStatus(msg, isError) {
+            classStatus.textContent = msg;
+            classStatus.style.color = isError ? '#dc3545' : '#28a745';
+            setTimeout(() => { classStatus.textContent = ''; }, 3000);
+        }
+
+        if (addBtn) {
+            addBtn.addEventListener('click', function() {
+                const name = nameInput.value.trim();
+                if (!name) return;
+
+                fetch('save_class.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'add', name: name })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        nameInput.value = '';
+                        window.location.reload();
+                    } else {
+                        showClassStatus(data.message || 'Viga', true);
+                    }
+                })
+                .catch(() => showClassStatus('Võrgu viga', true));
+            });
+
+            nameInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') addBtn.click();
+            });
+        }
+
+        if (classList) {
+            classList.addEventListener('click', function(e) {
+                const btn = e.target.closest('.delete-class-btn');
+                if (!btn) return;
+                const tag = btn.closest('.class-tag');
+                const name = tag.dataset.name;
+
+                if (!confirm('Kustutada klass "' + name + '"? Õpilastelt eemaldatakse see klass.')) return;
+
+                fetch('save_class.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'delete', name: name })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        showClassStatus(data.message || 'Viga', true);
+                    }
+                })
+                .catch(() => showClassStatus('Võrgu viga', true));
+            });
+        }
     });
     </script>
 <?php endif; ?>

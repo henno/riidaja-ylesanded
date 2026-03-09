@@ -39,14 +39,6 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     exit;
 }
 
-// Validate grade (if provided)
-$allowedGrades = ['5r', '7r', '8r'];
-if ($grade !== null && $grade !== '' && !in_array($grade, $allowedGrades)) {
-    http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Vigane klass. Lubatud: ' . implode(', ', $allowedGrades)]);
-    exit;
-}
-
 // Convert empty string to null
 if ($grade === '') {
     $grade = null;
@@ -58,6 +50,16 @@ try {
 
     // Create model instance
     $studentsModel = new StudentsModel();
+
+    // Validate grade against database classes (if provided)
+    if ($grade !== null) {
+        $allowedGrades = $studentsModel->getAllClassNames();
+        if (!in_array($grade, $allowedGrades)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Vigane klass. Lubatud: ' . implode(', ', $allowedGrades)]);
+            exit;
+        }
+    }
 
     // Update the grade
     $success = $studentsModel->updateStudentGrade($email, $grade);

@@ -46,6 +46,9 @@ class StudentsController {
         // Get all students with their current grades (for the classes tab)
         $students = $this->studentsModel->getAllStudents();
 
+        // Get all classes from database
+        $classes = $this->studentsModel->getAllClasses();
+
         // Get student count by grade for statistics
         $gradeStats = $this->studentsModel->getStudentCountByGrade();
 

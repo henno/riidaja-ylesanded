@@ -1,8 +1,8 @@
 CREATE TABLE migrations (
-        id INTEGER PRIMARY KEY,
-        migration TEXT,
-        applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+                id INTEGER PRIMARY KEY,
+                migration TEXT UNIQUE,
+                applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
 CREATE TABLE IF NOT EXISTS "results" (
     id INTEGER PRIMARY KEY, 
     email TEXT, 
@@ -40,3 +40,8 @@ CREATE TABLE sqlite_sequence(name,seq);
 CREATE INDEX idx_sessions_email ON exercise_sessions(email);
 CREATE INDEX idx_sessions_status ON exercise_sessions(status);
 CREATE INDEX idx_sessions_started ON exercise_sessions(started_at);
+CREATE TABLE classes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    sort_order INTEGER NOT NULL DEFAULT 0
+);

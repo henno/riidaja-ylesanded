@@ -145,14 +145,23 @@ function completionClass($cnt): string
         <input type="text" id="studentFilter" class="filter-input" placeholder="Filtreeri õpilasi...">
         <?php
         require_once __DIR__ . '/../models/StudentsModel.php';
+        $studentsModelInstance = new StudentsModel();
         $gradeMap = array();
-        foreach ((new StudentsModel())->getAllStudents() as $s){
+        foreach ($studentsModelInstance->getAllStudents() as $s){
             $gradeMap[$s['email']] = $s['grade'];
         }
+        // Build grade groups dynamically from database
         $byGrade = array();
+        foreach ($studentsModelInstance->getAllClassNames() as $className) {
+            $byGrade[$className] = array();
+        }
+        $byGrade['Määramata'] = array();
         foreach ($studentResults as $email => $stu){
             $grade = isset($gradeMap[$email]) ? $gradeMap[$email] : null;
             $key   = $grade ? $grade : 'Määramata';
+            if (!isset($byGrade[$key])) {
+                $byGrade[$key] = array();
+            }
             $stu['grade'] = $grade;
             $stu['email'] = $email;
             $byGrade[$key][] = $stu;
@@ -203,6 +212,7 @@ function completionClass($cnt): string
                 if ($best[$id] === INF || $best[$id] === 0) $best[$id] = null;
             }
             ?>
+            <div class="student-header"><?= h($grade) ?></div>
             <table class="student-grade-table">
                 <thead><tr><th>#</th><th><?= h($grade) ?></th><?php foreach ($allExercises as $ex){
                         $id = $ex['id'];
