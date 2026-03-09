@@ -240,7 +240,7 @@
 </style>
 
 <p>Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Vale klahvi vajutamisel ei saa edasi – vajuta õiget tähte. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 20, Täpsus ≥ 97%</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ 17, Täpsus ≥ 97%</p>
 
 <form id="task-form">
     <table id="typing-table">
@@ -313,7 +313,7 @@
 
 <script>
     // Requirements: 20 WPM, 97% accuracy
-    const REQUIRED_WPM = 20;
+    const REQUIRED_WPM = 17;
     const REQUIRED_ACCURACY = 97;
     const TIME_LIMIT = 30;
 
