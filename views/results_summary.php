@@ -149,7 +149,7 @@ function completionClass($cnt): string
         foreach ((new StudentsModel())->getAllStudents() as $s){
             $gradeMap[$s['email']] = $s['grade'];
         }
-        $byGrade = array('5r'=>array(),'7r'=>array(),'8r'=>array(),'Määramata'=>array());
+        $byGrade = array();
         foreach ($studentResults as $email => $stu){
             $grade = isset($gradeMap[$email]) ? $gradeMap[$email] : null;
             $key   = $grade ? $grade : 'Määramata';
@@ -157,6 +157,11 @@ function completionClass($cnt): string
             $stu['email'] = $email;
             $byGrade[$key][] = $stu;
         }
+        uksort($byGrade, function($a, $b){
+            if ($a === 'Määramata') return 1;
+            if ($b === 'Määramata') return -1;
+            return strnatcmp($a, $b);
+        });
         foreach ($byGrade as &$arr){
             usort($arr, function($a,$b){ return strcmp($a['name'], $b['name']); });
         }
