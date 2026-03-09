@@ -171,7 +171,7 @@
       echo '<td>' . $myBestFormatted . '</td>';
       echo '<td>' . $bestFormatted . '</td>';
       echo '<td>' . $avgFormatted . '</td>';
-      echo '<td><a href="?page=results&exercise=' . $id . '">Tulemused</a></td>';
+      echo '<td><a href="?page=results&exercise=' . $id . '&summary=0">Tulemused</a></td>';
       echo '</tr>';
     }
   ?>
