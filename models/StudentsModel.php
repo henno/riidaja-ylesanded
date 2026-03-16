@@ -301,7 +301,8 @@ class StudentsModel {
      */
     public function getActiveStudentsByDateRange($dateFrom, $dateTo) {
         // Combined query: get results AND sessions, then merge them
-        // Sessions track ALL time including abandoned attempts (prevents F5 cheating)
+        // For time: uses duration if available, otherwise elapsed for time-based exercises
+        // For WPM exercises without duration, elapsed is WPM (not seconds) so we skip it
         $stmt = $this->db->prepare('
             SELECT
                 activity_date,
@@ -311,15 +312,22 @@ class StudentsModel {
                 SUM(session_count) as session_count,
                 SUM(total_seconds) as total_seconds
             FROM (
-                -- Completed results (for counting completed exercises)
+                -- Completed results (for counting completed exercises and their duration)
                 SELECT
                     date(r.timestamp) as activity_date,
                     r.email,
                     r.name,
                     COUNT(r.id) as result_count,
                     0 as session_count,
-                    0 as total_seconds
+                    SUM(
+                        CASE
+                            WHEN r.duration IS NOT NULL THEN ABS(r.duration)
+                            WHEN e.result_type = "time" OR e.result_type IS NULL THEN ABS(r.elapsed)
+                            ELSE 0
+                        END
+                    ) as total_seconds
                 FROM results r
+                LEFT JOIN exercises e ON r.exercise_id = e.id
                 WHERE date(r.timestamp) >= ? AND date(r.timestamp) <= ?
                 GROUP BY date(r.timestamp), r.email, r.name
 
