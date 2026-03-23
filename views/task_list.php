@@ -71,8 +71,10 @@
       // Format based on result type
       if ($resultType === 'wpm') {
         // WPM exercises: show WPM requirements and format results as WPM
+        $reqAccuracy = ($exercise && isset($exercise['required_accuracy']) && $exercise['required_accuracy'] !== null)
+          ? round($exercise['required_accuracy']) : 90;
         $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
-          ? round($exercise['target_time']) . ' WPM, 90%'
+          ? round($exercise['target_time']) . ' WPM, ' . $reqAccuracy . '%'
           : '-';
         $myBestFormatted = ($myBest !== null && $myBest !== false) ? round($myBest) . ' WPM' : '-';
         $bestFormatted = ($best && isset($best['elapsed']) && $best['elapsed'] !== null)

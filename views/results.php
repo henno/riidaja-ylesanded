@@ -93,7 +93,22 @@ if ($emailFilter && $exerciseFilter) {
 
 <table>
   <thead>
-    <tr><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th>Tulemus (s)</th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
+    <?php
+    // Determine column header based on exercise filter
+    $resultColumnHeader = 'Tulemus';
+    if ($exerciseFilter) {
+        global $resultsModel;
+        if (!isset($resultsModel)) {
+            require_once __DIR__ . '/../models/ResultsModel.php';
+            $resultsModel = new ResultsModel();
+        }
+        $filteredExercise = $resultsModel->getExercise($exerciseFilter);
+        $resultColumnHeader = ($filteredExercise && $filteredExercise['result_type'] === 'wpm') ? 'Tulemus (WPM)' : 'Tulemus (s)';
+    } else {
+        $resultColumnHeader = 'Tulemus';
+    }
+    ?>
+    <tr><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th><?= $resultColumnHeader ?></th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
     <tr class="filter-row">
       <td>
         <div class="filter-wrapper">

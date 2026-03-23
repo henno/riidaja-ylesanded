@@ -16,7 +16,7 @@ CREATE TABLE exercises (
     title TEXT,
     target_time REAL,
     description TEXT
-, result_type TEXT DEFAULT 'time', min_value REAL DEFAULT 11);
+, result_type TEXT DEFAULT 'time', min_value REAL DEFAULT 11, required_accuracy REAL DEFAULT NULL);
 CREATE TABLE students (
     email TEXT PRIMARY KEY,
     name TEXT NOT NULL,

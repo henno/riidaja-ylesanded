@@ -111,18 +111,42 @@ function extractTargetTime($filePath) {
     $content = file_get_contents($filePath);
     // Default target time if not specified
     $targetTime = 60;
-    
+
     // Look for target time in the file
-    // Pattern 1: Specific value assignment (most exercises)
-    if (preg_match('/elapsed >= (\d+)/', $content, $matches)) {
+    // Pattern 1: REQUIRED_WPM constant in WPM exercises
+    if (preg_match('/REQUIRED_WPM\s*=\s*(\d+)/', $content, $matches)) {
         $targetTime = $matches[1];
     }
-    // Pattern 2: Direct reference to time in seconds
+    // Pattern 2: Specific value assignment (most exercises)
+    elseif (preg_match('/elapsed >= (\d+)/', $content, $matches)) {
+        $targetTime = $matches[1];
+    }
+    // Pattern 3: Direct reference to time in seconds
     elseif (preg_match('/aega (\d+) sekundit/', $content, $matches)) {
         $targetTime = $matches[1];
     }
-    
+
     return $targetTime;
+}
+
+function extractRequiredAccuracy($filePath) {
+    $content = file_get_contents($filePath);
+
+    if (preg_match('/REQUIRED_ACCURACY\s*=\s*(\d+)/', $content, $matches)) {
+        return (int)$matches[1];
+    }
+
+    return null;
+}
+
+function extractResultType($filePath) {
+    $content = file_get_contents($filePath);
+
+    if (preg_match('/REQUIRED_WPM\s*=\s*\d+/', $content)) {
+        return 'wpm';
+    }
+
+    return 'time';
 }
 
 // Function to extract a simple description from an exercise file
@@ -152,21 +176,23 @@ foreach ($exerciseFiles as $exerciseFile) {
     $exerciseId = basename($exerciseFile, '.php');
     $targetTime = extractTargetTime($exerciseFile);
     $description = extractDescription($exerciseFile);
-    
+    $requiredAccuracy = extractRequiredAccuracy($exerciseFile);
+    $resultType = extractResultType($exerciseFile);
+
     // Generate a title based on the exercise ID
     $title = "Ülesanne " . $exerciseId;
-    
+
     // Check if this exercise already exists in the database
     if (in_array($exerciseId, $existingExercises)) {
         // Update existing exercise
-        $stmt = $db->prepare("UPDATE exercises SET title = ?, target_time = ?, description = ? WHERE id = ?");
-        $stmt->execute([$title, $targetTime, $description, $exerciseId]);
+        $stmt = $db->prepare("UPDATE exercises SET title = ?, target_time = ?, description = ?, required_accuracy = ?, result_type = ? WHERE id = ?");
+        $stmt->execute([$title, $targetTime, $description, $requiredAccuracy, $resultType, $exerciseId]);
         echo "Updated exercise: {$exerciseId}\n";
         $exercisesUpdated++;
     } else {
         // Insert new exercise
-        $stmt = $db->prepare("INSERT INTO exercises (id, title, target_time, description) VALUES (?, ?, ?, ?)");
-        $stmt->execute([$exerciseId, $title, $targetTime, $description]);
+        $stmt = $db->prepare("INSERT INTO exercises (id, title, target_time, description, required_accuracy, result_type) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmt->execute([$exerciseId, $title, $targetTime, $description, $requiredAccuracy, $resultType]);
         echo "Added new exercise: {$exerciseId}\n";
         $exercisesAdded++;
     }

@@ -214,7 +214,7 @@ class ResultsModel {
     $numericExerciseId = (int)$exerciseId;
 
     $stmt = $this->db->prepare('
-      SELECT id, title, target_time, description, result_type, min_value
+      SELECT id, title, target_time, description, result_type, min_value, required_accuracy
       FROM exercises
       WHERE id = ? OR id = ?
       LIMIT 1
@@ -229,7 +229,7 @@ class ResultsModel {
    * @return array Array of exercise information
    */
   public function getAllExercisesInfo() {
-    $stmt = $this->db->query('SELECT id, title, target_time, description, result_type, min_value FROM exercises ORDER BY id');
+    $stmt = $this->db->query('SELECT id, title, target_time, description, result_type, min_value, required_accuracy FROM exercises ORDER BY id');
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
