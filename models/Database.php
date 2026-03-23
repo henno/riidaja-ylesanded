@@ -118,23 +118,33 @@ class Database
     private static function processExerciseFile(string $filePath): array
     {
         $exerciseId = basename($filePath, '.php');
+        $content = file_get_contents($filePath);
+        $isWpm = (bool)preg_match('/REQUIRED_WPM\s*=\s*\d+/', $content);
+        $requiredAccuracy = null;
+        if (preg_match('/REQUIRED_ACCURACY\s*=\s*(\d+)/', $content, $m)) {
+            $requiredAccuracy = (int)$m[1];
+        }
         return [
             'id' => $exerciseId,
-            'title' => "Ülesanne " . $exerciseId, // Consider if this should be configurable
+            'title' => "Ülesanne " . $exerciseId,
             'target_time' => self::extractTargetTimeFromFile($filePath),
-            'description' => self::extractDescriptionFromFile($filePath, $exerciseId)
+            'description' => self::extractDescriptionFromFile($filePath, $exerciseId),
+            'result_type' => $isWpm ? 'wpm' : 'time',
+            'required_accuracy' => $requiredAccuracy,
         ];
     }
 
     private static function saveExercise(array $exercise): void
     {
         $sql = '
-            INSERT INTO ' . self::TABLE_EXERCISES . ' (id, title, target_time, description)
-            VALUES (:id, :title, :target_time, :description)
+            INSERT INTO ' . self::TABLE_EXERCISES . ' (id, title, target_time, description, result_type, required_accuracy)
+            VALUES (:id, :title, :target_time, :description, :result_type, :required_accuracy)
             ON CONFLICT(id) DO UPDATE SET
                 title = excluded.title,
                 target_time = excluded.target_time,
-                description = excluded.description
+                description = excluded.description,
+                result_type = excluded.result_type,
+                required_accuracy = excluded.required_accuracy
         ';
         $stmt = self::$pdo->prepare($sql);
         $stmt->execute([
@@ -142,6 +152,8 @@ class Database
             ':title' => $exercise['title'],
             ':target_time' => $exercise['target_time'],
             ':description' => $exercise['description'],
+            ':result_type' => $exercise['result_type'],
+            ':required_accuracy' => $exercise['required_accuracy'],
         ]);
     }
 
