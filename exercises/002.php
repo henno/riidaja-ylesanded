@@ -75,7 +75,32 @@ if ($userEmail) {
   }
 </style>
 
-<p>Taasta iga tekstikastis lausete õige järjekord. Kui laused on õiges järjekorras, muutub tekstikasti taust roheliseks. Sul on aega 55 sekundit.</p>
+<div style="background-color: #f0f8ff; border: 2px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px auto; max-width: 800px;">
+  <h3 style="margin-top: 0; color: #0066cc;">📖 Kuidas seda ülesannet teha?</h3>
+
+  <p><strong>Ülesande kirjeldus:</strong><br>
+  Vasakul näed algset teksti, paremale pead sama teksti kirjutama, kuid soovitud järjekorras. Kui laused on õiges järjekorras, muutub tekstikasti taust <span style="background-color: #ccffcc; padding: 2px 6px;">roheliseks</span>.</p>
+
+  <p><strong>Samm-sammult juhis:</strong></p>
+  <ol style="line-height: 1.8;">
+    <li><strong>Kliki tekstikastile</strong> - Kliki hiire vasaku nupuga paremal olevasse valge kastile</li>
+    <li><strong>Eemalda vana tekst</strong> - Märgi kõik tekst kombinatsiooniga <kbd>Ctrl</kbd>+<kbd>A</kbd> ja pärast <kbd>Delete</kbd> või <kbd>Backspace</kbd></li>
+    <li><strong>Kirjuta laused õiges järjekorras</strong> - Kirjuta laused täpselt nii nagu vasakul näed, iga lause uuele reale</li>
+    <li><strong>Vajuta Enter</strong> - Lause lõpus vajuta Enter-klahvi, et minna uuele reale</li>
+    <li><strong>Taust muutub roheliseks</strong> - Kui oled kõik õigesti kirjutanud, muutub kastikese taust roheliseks!</li>
+  </ol>
+
+  <p><strong>💡 Nõuanded:</strong></p>
+  <ul style="line-height: 1.8;">
+    <li>Kasuta <strong>suurtähti ja väiketähti</strong> täpselt nii nagu vasakul näed</li>
+    <li>Kasuta <strong>punktuatsiooni</strong> (jutumärgid, punktid jne) täpselt nii nagu vasakul</li>
+    <li>Ära lisa ekstra tühikuid rea algusesse või lõppu</li>
+    <li>Kui eksid, saad kogu teksti kustutada ja uuesti alustada</li>
+    <li>Sul on aega <strong>55 sekundit</strong> - ära kiirusta!</li>
+  </ul>
+</div>
+
+<p style="text-align: center; margin: 20px 0; font-weight: bold;">⬇️ Alusta alltoodud tabeliga ⬇️</p>
 <form id="task-form">
   <table id="sentence-table">
     <thead>
