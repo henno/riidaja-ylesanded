@@ -54,6 +54,7 @@ if (AUTH_PROVIDER === 'google') {
 // ─────────────────────────────────────────────────────────────────────────────
 
 if (isset($_GET['logout'])) {
+    $authProvider = $_SESSION['auth_provider'] ?? null;
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -61,21 +62,15 @@ if (isset($_GET['logout'])) {
     }
     session_destroy();
 
-    if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
-        header('Location: ./');
-        exit;
-    }
-
-    if (AUTH_PROVIDER === 'google') {
-        // Google has no server-side logout endpoint
-        header('Location: ./');
-        exit;
-    } else {
-        // Azure logout
-        $logoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=' . urlencode('https://torva.ee/riidaja/');
+    // Redirect based on auth provider
+    if ($authProvider === 'azure') {
+        $logoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=' . urlencode('https://torva.ee/riidaja/login.php');
         header('Location: ' . $logoutUrl);
-        exit;
+    } else {
+        // Google or bypass - just redirect to login
+        header('Location: login.php');
     }
+    exit;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,112 +82,16 @@ if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
     // Create a test user session without OAuth authentication
     if (!isset($_SESSION['accessToken'])) {
         $_SESSION['accessToken'] = 'bypass_token';
-        $_SESSION['auth_provider'] = AUTH_PROVIDER;
+        $_SESSION['auth_provider'] = 'bypass';
         $_SESSION['user'] = [
             'name'  => 'Test User',
             'email' => 'test.user@example.com'
         ];
     }
 } elseif (!isset($_SESSION['accessToken'])) {
-    // Check for provider mismatch: if session was created for a different provider, clear it
-    if (isset($_SESSION['auth_provider']) && $_SESSION['auth_provider'] !== AUTH_PROVIDER) {
-        $_SESSION = [];
-    }
-
-    if (!isset($_GET['code'])) {
-        // Redirect to provider login
-        if (AUTH_PROVIDER === 'google') {
-            $authUrl = $provider->getAuthorizationUrl([
-                'scope' => ['openid', 'profile', 'email'],
-                'hd'    => 'vkok.ee',   // restrict to vkok.ee Google Workspace domain
-            ]);
-        } else {
-            $authUrl = $provider->getAuthorizationUrl(['prompt' => 'select_account']);
-        }
-        $_SESSION['oauth2state'] = $provider->getState();
-        header('Location: ' . $authUrl);
-        exit;
-    }
-
-    if (empty($_GET['state']) || $_GET['state'] !== $_SESSION['oauth2state']) {
-        unset($_SESSION['oauth2state']);
-        exit('Invalid state');
-    }
-
-    // Clear oauth2state to prevent reuse
-    unset($_SESSION['oauth2state']);
-
-    try {
-        $token = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
-    } catch (Exception $e) {
-        // Authorization code already used or expired - redirect to start fresh
-        error_log('Riidaja OAuth error: ' . $e->getMessage());
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-        header('Location: ./');
-        exit;
-    }
-
-    $_SESSION['accessToken'] = $token->getToken();
-    $_SESSION['auth_provider'] = AUTH_PROVIDER;
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Fetch user info based on provider
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    if (AUTH_PROVIDER === 'google') {
-        // Google: user info is returned by getResourceOwner() — no extra API call needed
-        $resourceOwner = $provider->getResourceOwner($token);
-        $email = $resourceOwner->getEmail();
-
-        // Enforce domain restriction server-side as a second check
-        if (!str_ends_with($email, '@vkok.ee')) {
-            session_destroy();
-            http_response_code(403);
-            exit('Access restricted to @vkok.ee accounts.');
-        }
-
-        $_SESSION['user'] = [
-            'name'  => $resourceOwner->getName(),
-            'email' => $email,
-        ];
-    } else {
-        // Azure: must call Graph API
-        $graph = new Graph();
-        $graph->setAccessToken($_SESSION['accessToken']);
-
-        $user = $graph->createRequest('GET', '/me')
-            ->setReturnType(Model\User::class)
-            ->execute();
-
-        $_SESSION['user'] = [
-            'name'  => $user->getDisplayName(),
-            'email' => $user->getUserPrincipalName()
-        ];
-    }
-
-    // Redirect to clean URL after successful authentication
-    if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
-        // Preserve important query parameters but remove authentication-related ones
-        $params = $_GET;
-        unset($params['code']);
-        unset($params['state']);
-        unset($params['session_state']);
-
-        $redirectUrl = strtok($_SERVER['REQUEST_URI'], '?');
-
-        // Add remaining parameters back to the URL
-        if (!empty($params)) {
-            $redirectUrl .= '?' . http_build_query($params);
-        }
-
-        // Add cache control headers to prevent caching of the authentication URL
-        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-        header('Pragma: no-cache');
-        header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
-
-        header('Location: ' . $redirectUrl);
-        exit;
-    }
+    // Not authenticated - redirect to login page
+    header('Location: login.php');
+    exit;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

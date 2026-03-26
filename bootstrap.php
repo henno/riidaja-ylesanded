@@ -1,17 +1,10 @@
 <?php
 /**
- * Domain detection and configuration bootstrap.
+ * Bootstrap configuration.
  *
- * This file must be included at the very top of all entry points
- * BEFORE any authentication or database code runs.
- *
- * Sets:
- * - AUTH_PROVIDER: 'google' or 'azure'
- * - DB_FILE_PATH: path to the appropriate SQLite database
+ * This file sets up the database path based on domain.
+ * All requests use the same database.db - no separate databases per domain.
  */
 
-$host = $_SERVER['HTTP_HOST'] ?? '';
-$isVkok = ($host === 'vkok.ee' || str_ends_with($host, '.vkok.ee'));
-
-define('AUTH_PROVIDER', $isVkok ? 'google' : 'azure');
-define('DB_FILE_PATH', __DIR__ . ($isVkok ? '/database_vkok.db' : '/database.db'));
+// Always use the same database
+define('DB_FILE_PATH', __DIR__ . '/database.db');
