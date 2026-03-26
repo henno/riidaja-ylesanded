@@ -8,7 +8,11 @@
     "dev": "node server.js"
   },
   "dependencies": {
-    "ws": "^8.14.2",
-    "better-sqlite3": "^9.2.2"
+    "better-sqlite3": "^9.2.2",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "node-gyp": "^12.2.0",
+    "python3": "^0.0.1"
   }
 }
