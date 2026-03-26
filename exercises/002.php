@@ -220,25 +220,39 @@ for (let i = 0; i < rows; i++) {
 
   textarea.addEventListener('input', handleInput);
 
+  // Track original line count to detect cuts
+  const originalLineCount = (textarea.value.match(/\n/g) || []).length + 1;
+
   // Help bubble guidance on focus
   let helpBubbleTimeout = null;
   textarea.addEventListener('focus', (e) => {
     const helpBubble = document.getElementById('help-bubble');
     const rect = textarea.getBoundingClientRect();
+    const currentLineCount = (textarea.value.match(/\n/g) || []).length + 1;
+    const lineCut = currentLineCount < originalLineCount;
 
     let message = '';
 
-    if (textarea.value.trim() === '') {
+    // Check cut FIRST, before other conditions
+    if (lineCut) {
+      message = 'Ctrl+Home (algusesse)';
+    } else if (textarea.value.trim() === '') {
       message = 'Ctrl+V (kleebi)';
     } else if (textarea.value === textarea.dataset.correct) {
       message = '✓ Õige!';
     } else {
-      // Check if cursor is at the end of text
-      const isAtEnd = textarea.selectionStart === textarea.value.length;
-      if (!isAtEnd) {
-        message = 'Ctrl+End (lõppu)';
+      // Check if text is selected
+      const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
+      if (hasSelection) {
+        message = 'Ctrl+X (lõika)';
       } else {
-        message = 'Ctrl+Shift+Home (vali) → Ctrl+X (lõika)';
+        // Check if cursor is at the end of text
+        const isAtEnd = textarea.selectionStart === textarea.value.length;
+        if (!isAtEnd) {
+          message = 'Ctrl+End (lõppu)';
+        } else {
+          message = 'Shift+Home (vali)';
+        }
       }
     }
 
@@ -257,28 +271,52 @@ for (let i = 0; i < rows; i++) {
     }, 300);
   });
 
-  // Update help bubble when cursor moves
-  textarea.addEventListener('keyup', (e) => {
+  // Function to update help bubble based on cursor position
+  function updateHelpBubble() {
     if (document.activeElement !== textarea) return;
 
     const helpBubble = document.getElementById('help-bubble');
     const rect = textarea.getBoundingClientRect();
+    const currentLineCount = (textarea.value.match(/\n/g) || []).length + 1;
+    const lineCut = currentLineCount < originalLineCount;
 
     let message = '';
-    if (textarea.value === textarea.dataset.correct) {
+
+    // Check cut FIRST, before other conditions
+    if (lineCut) {
+      message = 'Ctrl+Home (algusesse)';
+    } else if (textarea.value === textarea.dataset.correct) {
       message = '✓ Õige!';
+    } else if (textarea.value.trim() === '') {
+      message = 'Ctrl+V (kleebi)';
     } else {
-      const isAtEnd = textarea.selectionStart === textarea.value.length;
-      if (!isAtEnd) {
-        message = 'Ctrl+End (lõppu)';
+      // Check if text is selected
+      const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
+      if (hasSelection) {
+        message = 'Ctrl+X (lõika)';
       } else {
-        message = 'Ctrl+Shift+Home (vali) → Ctrl+X (lõika)';
+        // Check if cursor is at the end of text
+        const isAtEnd = textarea.selectionStart === textarea.value.length;
+        if (!isAtEnd) {
+          message = 'Ctrl+End (lõppu)';
+        } else {
+          message = 'Shift+Home (vali)';
+        }
       }
     }
 
     helpBubble.textContent = message;
     helpBubble.style.left = (rect.left + rect.width / 2) + 'px';
     helpBubble.style.top = (rect.top - 40) + 'px';
+  }
+
+  // Update help bubble when cursor moves (keyboard or mouse)
+  textarea.addEventListener('keyup', updateHelpBubble);
+  textarea.addEventListener('mouseup', updateHelpBubble);
+
+  // Update help bubble after cut operation completes
+  textarea.addEventListener('cut', () => {
+    setTimeout(updateHelpBubble, 0);
   });
 
   textareas.push(textarea);
