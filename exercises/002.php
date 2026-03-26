@@ -99,7 +99,7 @@ document.getElementById('instructions').innerHTML =
   '<p>Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Ära kirjuta lauseid käsitsi! Sul on aega 55 sekundit.</p>' +
   '<ul>' +
   '<li><b>' + (macInstructions ? '⌘↓' : 'Ctrl+End') + '</b> — liigu teksti lõppu</li>' +
-  '<li><b>' + (macInstructions ? '⌘Shift+←' : 'Shift+Home') + '</b> — vali rida</li>' +
+  '<li><b>' + (macInstructions ? '⌘Shift+←' : 'Shift+Home') + '</b> — vali tekst kursorist rea alguseni</li>' +
   '<li><b>' + (macInstructions ? '⌘X' : 'Ctrl+X') + '</b> — lõika</li>' +
   '<li><b>' + (macInstructions ? '⌘↑' : 'Ctrl+Home') + '</b> — liigu teksti algusesse</li>' +
   '<li><b>' + (macInstructions ? '⌘V' : 'Ctrl+V') + '</b> — kleebi</li>' +
@@ -388,13 +388,15 @@ for (let i = 0; i < rows; i++) {
     helpBubble.style.top = (rect.top - 40) + 'px';
   }
 
-  // Update help bubble when cursor moves (keyboard or mouse)
+  // Update help bubble on any state change
   textarea.addEventListener('keyup', updateHelpBubble);
+  textarea.addEventListener('keydown', () => setTimeout(updateHelpBubble, 0));
   textarea.addEventListener('mouseup', updateHelpBubble);
-
-  // Update help bubble after cut operation completes
-  textarea.addEventListener('cut', () => {
-    setTimeout(updateHelpBubble, 0);
+  textarea.addEventListener('input', updateHelpBubble);
+  textarea.addEventListener('paste', () => setTimeout(updateHelpBubble, 0));
+  textarea.addEventListener('cut', () => setTimeout(updateHelpBubble, 0));
+  document.addEventListener('selectionchange', () => {
+    if (document.activeElement === textarea) updateHelpBubble();
   });
 
   textareas.push(textarea);
