@@ -55,6 +55,10 @@ if ($userEmail) {
     box-sizing: border-box;
     margin: 0;
     display: block;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
   }
   .correct {
     background-color: #ccffcc;
