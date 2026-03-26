@@ -1,8 +1,9 @@
 {
   "require": {
-    "thenetworg/oauth2-azure": "^2.0",
+    "ext-pdo": "*",
+    "league/oauth2-google": "^5.0",
     "microsoft/microsoft-graph": "^1.100",
-    "ext-pdo": "*"
+    "thenetworg/oauth2-azure": "^2.0"
   },
   "config": {
     "optimize-autoloader": true,

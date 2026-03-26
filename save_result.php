@@ -1,6 +1,7 @@
 <?php
 session_start();
-$db = new PDO('sqlite:' . __DIR__ . '/database.db');
+require_once __DIR__ . '/bootstrap.php';
+$db = new PDO('sqlite:' . DB_FILE_PATH);
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 $data = json_decode(file_get_contents('php://input'), true);

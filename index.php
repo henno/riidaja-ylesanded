@@ -2,6 +2,9 @@
 session_start();
 date_default_timezone_set('Europe/Tallinn');
 
+// Domain detection and database path setup (MUST be before other requires)
+require_once __DIR__ . '/bootstrap.php';
+
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/models/Database.php';
 require_once __DIR__ . '/models/ResultsModel.php';
@@ -9,6 +12,7 @@ require_once __DIR__ . '/models/StudentsModel.php';
 require_once __DIR__ . '/controllers/TaskController.php';
 require_once __DIR__ . '/controllers/ResultsController.php';
 require_once __DIR__ . '/controllers/StudentsController.php';
+
 // Check if config.php exists, if not, create it from the sample
 if (!file_exists(__DIR__ . '/config.php') && file_exists(__DIR__ . '/config.sample.php')) {
     copy(__DIR__ . '/config.sample.php', __DIR__ . '/config.php');
@@ -18,21 +22,36 @@ require 'config.php';
 use Microsoft\Graph\Graph;
 use Microsoft\Graph\Model;
 use Firebase\JWT\JWT;
+use League\OAuth2\Client\Provider\Google;
 
-// Allow 5 minutes clock skew between server and Microsoft
-JWT::$leeway = 300;
+// ─────────────────────────────────────────────────────────────────────────────
+// Provider setup (Google or Azure)
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Use custom Azure provider with leeway support for clock skew
-require_once __DIR__ . '/AzureWithLeeway.php';
-
-$provider = new AzureWithLeeway([
-        'clientId' => AZURE_CLIENT_ID,
-        'clientSecret' => AZURE_CLIENT_SECRET,
+if (AUTH_PROVIDER === 'google') {
+    $provider = new Google([
+        'clientId'     => GOOGLE_CLIENT_ID,
+        'clientSecret' => GOOGLE_CLIENT_SECRET,
+        'redirectUri'  => GOOGLE_REDIRECT_URI,
+    ]);
+} else {
+    // Allow 5 minutes clock skew between server and Microsoft
+    JWT::$leeway = 300;
+    // Use custom Azure provider with leeway support for clock skew
+    require_once __DIR__ . '/AzureWithLeeway.php';
+    $provider = new AzureWithLeeway([
+        'clientId'               => AZURE_CLIENT_ID,
+        'clientSecret'           => AZURE_CLIENT_SECRET,
         'scopes'                 => ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
         'defaultEndPointVersion' => '2.0',
         'resource'               => 'https://graph.microsoft.com',
         'tokenLeeway'            => 300  // 5 minutes leeway for server clock skew
-]);
+    ]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Logout handler
+// ─────────────────────────────────────────────────────────────────────────────
 
 if (isset($_GET['logout'])) {
     $_SESSION = [];
@@ -42,95 +61,148 @@ if (isset($_GET['logout'])) {
     }
     session_destroy();
 
-    // If bypass is enabled, just redirect to the home page
     if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
         header('Location: ./');
         exit;
+    }
+
+    if (AUTH_PROVIDER === 'google') {
+        // Google has no server-side logout endpoint
+        header('Location: ./');
+        exit;
     } else {
-        // Normal Azure logout
+        // Azure logout
         $logoutUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/logout?post_logout_redirect_uri=' . urlencode('https://torva.ee/riidaja/');
         header('Location: ' . $logoutUrl);
         exit;
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Authentication flow
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Check if authentication bypass is enabled
 if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
-    // Create a test user session without Azure authentication
+    // Create a test user session without OAuth authentication
     if (!isset($_SESSION['accessToken'])) {
         $_SESSION['accessToken'] = 'bypass_token';
+        $_SESSION['auth_provider'] = AUTH_PROVIDER;
         $_SESSION['user'] = [
-                'name'  => 'Test User',
-                'email' => 'test.user@example.com'
+            'name'  => 'Test User',
+            'email' => 'test.user@example.com'
         ];
     }
-} else {
-    // Normal Azure authentication flow
-    if (!isset($_SESSION['accessToken'])) {
-        if (!isset($_GET['code'])) {
+} elseif (!isset($_SESSION['accessToken'])) {
+    // Check for provider mismatch: if session was created for a different provider, clear it
+    if (isset($_SESSION['auth_provider']) && $_SESSION['auth_provider'] !== AUTH_PROVIDER) {
+        $_SESSION = [];
+    }
+
+    if (!isset($_GET['code'])) {
+        // Redirect to provider login
+        if (AUTH_PROVIDER === 'google') {
+            $authUrl = $provider->getAuthorizationUrl([
+                'scope' => ['openid', 'profile', 'email'],
+                'hd'    => 'vkok.ee',   // restrict to vkok.ee Google Workspace domain
+            ]);
+        } else {
             $authUrl = $provider->getAuthorizationUrl(['prompt' => 'select_account']);
-            $_SESSION['oauth2state'] = $provider->getState();
-            header('Location: ' . $authUrl);
-            exit;
         }
-        if (empty($_GET['state']) || ($_GET['state'] !== $_SESSION['oauth2state'])) {
-            unset($_SESSION['oauth2state']);
-            exit('Invalid state');
-        }
+        $_SESSION['oauth2state'] = $provider->getState();
+        header('Location: ' . $authUrl);
+        exit;
+    }
 
-        // Clear oauth2state to prevent reuse
+    if (empty($_GET['state']) || $_GET['state'] !== $_SESSION['oauth2state']) {
         unset($_SESSION['oauth2state']);
+        exit('Invalid state');
+    }
 
-        try {
-            $token = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
-        } catch (Exception $e) {
-            // Authorization code already used or expired - redirect to start fresh
-            error_log('Riidaja OAuth error: ' . $e->getMessage());
-            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-            header('Location: ./');
-            exit;
+    // Clear oauth2state to prevent reuse
+    unset($_SESSION['oauth2state']);
+
+    try {
+        $token = $provider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
+    } catch (Exception $e) {
+        // Authorization code already used or expired - redirect to start fresh
+        error_log('Riidaja OAuth error: ' . $e->getMessage());
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Location: ./');
+        exit;
+    }
+
+    $_SESSION['accessToken'] = $token->getToken();
+    $_SESSION['auth_provider'] = AUTH_PROVIDER;
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Fetch user info based on provider
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    if (AUTH_PROVIDER === 'google') {
+        // Google: user info is returned by getResourceOwner() — no extra API call needed
+        $resourceOwner = $provider->getResourceOwner($token);
+        $email = $resourceOwner->getEmail();
+
+        // Enforce domain restriction server-side as a second check
+        if (!str_ends_with($email, '@vkok.ee')) {
+            session_destroy();
+            http_response_code(403);
+            exit('Access restricted to @vkok.ee accounts.');
         }
-        $_SESSION['accessToken'] = $token->getToken();
 
+        $_SESSION['user'] = [
+            'name'  => $resourceOwner->getName(),
+            'email' => $email,
+        ];
+    } else {
+        // Azure: must call Graph API
         $graph = new Graph();
         $graph->setAccessToken($_SESSION['accessToken']);
 
         $user = $graph->createRequest('GET', '/me')
-                ->setReturnType(Model\User::class)
-                ->execute();
+            ->setReturnType(Model\User::class)
+            ->execute();
 
         $_SESSION['user'] = [
-                'name'  => $user->getDisplayName(),
-                'email' => $user->getUserPrincipalName()
+            'name'  => $user->getDisplayName(),
+            'email' => $user->getUserPrincipalName()
         ];
+    }
 
-        // Redirect to clean URL after successful authentication
-        if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
-            // Preserve important query parameters but remove authentication-related ones
-            $params = $_GET;
-            unset($params['code']);
-            unset($params['state']);
-            unset($params['session_state']);
+    // Redirect to clean URL after successful authentication
+    if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
+        // Preserve important query parameters but remove authentication-related ones
+        $params = $_GET;
+        unset($params['code']);
+        unset($params['state']);
+        unset($params['session_state']);
 
-            $redirectUrl = strtok($_SERVER['REQUEST_URI'], '?');
+        $redirectUrl = strtok($_SERVER['REQUEST_URI'], '?');
 
-            // Add remaining parameters back to the URL
-            if (!empty($params)) {
-                $redirectUrl .= '?' . http_build_query($params);
-            }
-
-            // Add cache control headers to prevent caching of the authentication URL
-            header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-            header('Pragma: no-cache');
-            header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
-
-            header('Location: ' . $redirectUrl);
-            exit;
+        // Add remaining parameters back to the URL
+        if (!empty($params)) {
+            $redirectUrl .= '?' . http_build_query($params);
         }
+
+        // Add cache control headers to prevent caching of the authentication URL
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+
+        header('Location: ' . $redirectUrl);
+        exit;
     }
 }
 
-$isAdmin = isset($_SESSION['user']['email']) && $_SESSION['user']['email'] === ADMIN_EMAIL;
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin check
+// ─────────────────────────────────────────────────────────────────────────────
+
+$isAdmin = isset($_SESSION['user']['email']) && (
+    $_SESSION['user']['email'] === ADMIN_EMAIL ||
+    (defined('VKOK_ADMIN_EMAIL') && VKOK_ADMIN_EMAIL && $_SESSION['user']['email'] === VKOK_ADMIN_EMAIL)
+);
 
 $resultsModel = new ResultsModel();
 $studentsModel = new StudentsModel();
@@ -167,6 +239,8 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
             email: <?= json_encode($_SESSION['user']['email'] ?? '') ?>,
             name: <?= json_encode($_SESSION['user']['name'] ?? '') ?>
         };
+        // WebSocket port for session tracking
+        window.RIIDAJA_WS_PORT = <?= AUTH_PROVIDER === 'google' ? 8766 : 8765 ?>;
     </script>
     <script>
         // Clean up URL in browser address bar if it contains authentication parameters

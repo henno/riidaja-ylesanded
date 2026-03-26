@@ -16,7 +16,7 @@ const crypto = require('crypto');
 
 // Configuration
 const PORT = process.env.WS_PORT || 8765;
-const DB_PATH = path.join(__dirname, '..', 'database.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'database.db');
 const HEARTBEAT_INTERVAL = 10000; // 10 seconds
 const SESSION_TIMEOUT = 30000; // 30 seconds without heartbeat = abandoned
 

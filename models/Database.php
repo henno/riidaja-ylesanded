@@ -4,7 +4,6 @@ class Database
 {
     private static ?PDO $pdo = null;
 
-    private const DB_FILE_PATH = __DIR__ . '/../database.db';
     private const MIGRATIONS_GLOB_PATH = __DIR__ . '/../migrations/*.sql';
     private const EXERCISES_GLOB_PATH = __DIR__ . '/../exercises/[0-9][0-9][0-9].php';
 
@@ -19,7 +18,8 @@ class Database
     public static function connect(): PDO
     {
         if (self::$pdo === null) {
-            self::$pdo = new PDO('sqlite:' . self::DB_FILE_PATH);
+            $dbPath = defined('DB_FILE_PATH') ? DB_FILE_PATH : __DIR__ . '/../database.db';
+            self::$pdo = new PDO('sqlite:' . $dbPath);
             self::$pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             self::initializeSchemaAndData();
         }

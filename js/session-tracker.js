@@ -35,7 +35,7 @@ class SessionTracker {
     getWebSocketUrl() {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.hostname;
-        const port = 8765; // Default WebSocket port
+        const port = window.RIIDAJA_WS_PORT || 8765; // Use injected port or default
         return `${protocol}//${host}:${port}`;
     }
 
