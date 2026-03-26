@@ -4,7 +4,7 @@ set -e
 
 IMAGE_NAME="riidaja-app"
 CONTAINER_NAME="riidaja-server"
-PORT=8000
+PORT=$(php -r "require 'config.php'; echo defined('DOCKER_PORT') ? DOCKER_PORT : 8000;" 2>/dev/null || echo 8000)
 
 function composer() {
   docker run --rm \

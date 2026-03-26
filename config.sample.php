@@ -15,3 +15,6 @@ const GOOGLE_REDIRECT_URI='https://torva.ee/riidaja/login-callback.php?provider=
 // - Delete exercise results
 // - Access admin-only features
 const ADMIN_EMAIL='henno.taht@torva.edu.ee';
+
+// Docker port configuration
+const DOCKER_PORT=8000;

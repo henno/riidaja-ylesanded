@@ -220,41 +220,110 @@ for (let i = 0; i < rows; i++) {
 
   textarea.addEventListener('input', handleInput);
 
-  // Track original line count to detect cuts
-  const originalLineCount = (textarea.value.match(/\n/g) || []).length + 1;
+  function getNonEmptyLineCount(value) {
+    return value.split('\n').filter(line => line.trim().length > 0).length;
+  }
+
+  function getNonEmptyLines(value) {
+    return value.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  }
+
+  const correctLines = getNonEmptyLines(textarea.dataset.correct);
+
+  function isCorrectOrder() {
+    const currentLines = getNonEmptyLines(textarea.value);
+    return currentLines.length === correctLines.length &&
+      currentLines.every((line, index) => line === correctLines[index]);
+  }
+
+  function isReadyForCut() {
+    const lastLineStart = textarea.value.lastIndexOf('\n') + 1;
+    return textarea.selectionStart === lastLineStart &&
+      textarea.selectionEnd === textarea.value.length;
+  }
+
+  function getEnterTargetPosition() {
+    const currentLines = getNonEmptyLines(textarea.value);
+    if (currentLines.length !== originalLineCount - 1) return null;
+
+    const expectedFirstLine = correctLines[0] + correctLines[1];
+    const expectedRemainingLines = correctLines.slice(2);
+    const isExpectedLayout = currentLines[0] === expectedFirstLine &&
+      currentLines.slice(1).every((line, index) => line === expectedRemainingLines[index]);
+
+    return isExpectedLayout ? correctLines[0].length : null;
+  }
+
+  function getEnterStepMessage() {
+    const targetPosition = getEnterTargetPosition();
+    if (targetPosition === null) return null;
+
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+      return 'Ctrl+Home (algusesse)';
+    }
+
+    const firstLineEnd = textarea.value.indexOf('\n');
+    const caretPosition = textarea.selectionStart;
+    const isOnFirstLine = caretPosition <= (firstLineEnd === -1 ? textarea.value.length : firstLineEnd);
+
+    if (!isOnFirstLine) {
+      return 'Ctrl+Home (algusesse)';
+    }
+
+    if (caretPosition < targetPosition) {
+      return 'Ctrl+→';
+    }
+
+    if (caretPosition > targetPosition) {
+      return 'Ctrl+←';
+    }
+
+    return 'Enter (uus rida)';
+  }
+
+  function getHelpBubbleMessage() {
+    const currentLineCount = getNonEmptyLineCount(textarea.value);
+    const lineCut = currentLineCount < originalLineCount;
+    const isAtStart = textarea.selectionStart === 0 && textarea.selectionEnd === 0;
+
+    if (lineCut) {
+      const enterStepMessage = getEnterStepMessage();
+      if (enterStepMessage) {
+        return enterStepMessage;
+      }
+      return isAtStart ? 'Ctrl+V (kleebi)' : 'Ctrl+Home (algusesse)';
+    }
+
+    if (textarea.value.trim() === '') {
+      return 'Ctrl+V (kleebi)';
+    }
+
+    if (isCorrectOrder()) {
+      return tr.nextElementSibling ? 'Tab (järgmine kast)' : '✓ Õige!';
+    }
+
+    if (isReadyForCut()) {
+      return 'Ctrl+X (lõika)';
+    }
+
+    const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
+    if (hasSelection) {
+      return 'Ctrl+End (lõppu)';
+    }
+
+    const isAtEnd = textarea.selectionStart === textarea.value.length;
+    return isAtEnd ? 'Shift+Home (vali)' : 'Ctrl+End (lõppu)';
+  }
+
+  // Track original non-empty line count to detect cuts even if an empty line remains behind
+  const originalLineCount = correctLines.length;
 
   // Help bubble guidance on focus
   let helpBubbleTimeout = null;
   textarea.addEventListener('focus', (e) => {
     const helpBubble = document.getElementById('help-bubble');
     const rect = textarea.getBoundingClientRect();
-    const currentLineCount = (textarea.value.match(/\n/g) || []).length + 1;
-    const lineCut = currentLineCount < originalLineCount;
-
-    let message = '';
-
-    // Check cut FIRST, before other conditions
-    if (lineCut) {
-      message = 'Ctrl+Home (algusesse)';
-    } else if (textarea.value.trim() === '') {
-      message = 'Ctrl+V (kleebi)';
-    } else if (textarea.value === textarea.dataset.correct) {
-      message = '✓ Õige!';
-    } else {
-      // Check if text is selected
-      const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
-      if (hasSelection) {
-        message = 'Ctrl+X (lõika)';
-      } else {
-        // Check if cursor is at the end of text
-        const isAtEnd = textarea.selectionStart === textarea.value.length;
-        if (!isAtEnd) {
-          message = 'Ctrl+End (lõppu)';
-        } else {
-          message = 'Shift+Home (vali)';
-        }
-      }
-    }
+    const message = getHelpBubbleMessage();
 
     helpBubble.textContent = message;
     helpBubble.classList.remove('hidden');
@@ -277,33 +346,7 @@ for (let i = 0; i < rows; i++) {
 
     const helpBubble = document.getElementById('help-bubble');
     const rect = textarea.getBoundingClientRect();
-    const currentLineCount = (textarea.value.match(/\n/g) || []).length + 1;
-    const lineCut = currentLineCount < originalLineCount;
-
-    let message = '';
-
-    // Check cut FIRST, before other conditions
-    if (lineCut) {
-      message = 'Ctrl+Home (algusesse)';
-    } else if (textarea.value === textarea.dataset.correct) {
-      message = '✓ Õige!';
-    } else if (textarea.value.trim() === '') {
-      message = 'Ctrl+V (kleebi)';
-    } else {
-      // Check if text is selected
-      const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
-      if (hasSelection) {
-        message = 'Ctrl+X (lõika)';
-      } else {
-        // Check if cursor is at the end of text
-        const isAtEnd = textarea.selectionStart === textarea.value.length;
-        if (!isAtEnd) {
-          message = 'Ctrl+End (lõppu)';
-        } else {
-          message = 'Shift+Home (vali)';
-        }
-      }
-    }
+    const message = getHelpBubbleMessage();
 
     helpBubble.textContent = message;
     helpBubble.style.left = (rect.left + rect.width / 2) + 'px';
