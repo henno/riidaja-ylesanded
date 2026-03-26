@@ -2,5 +2,6 @@ node_modules
 vendor
 config.php
 database.db
+database.sqlite
 .idea
 /log.txt
