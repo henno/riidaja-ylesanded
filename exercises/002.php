@@ -29,10 +29,31 @@ if ($userEmail) {
 ?>
 
 <style>
+  #instructions {
+    max-width: 800px;
+    margin: 20px auto 0;
+    padding: 12px 16px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1.5;
+    box-sizing: border-box;
+  }
+  #instructions p {
+    margin: 0 0 8px;
+  }
+  #instructions ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  #instructions li {
+    margin-bottom: 2px;
+  }
   #sentence-table {
     width: 100%;
     max-width: 800px;
-    margin: 20px auto;
+    margin: 10px auto 20px;
     border-collapse: collapse;
   }
   #sentence-table th, #sentence-table td {
@@ -71,7 +92,20 @@ if ($userEmail) {
   }
 </style>
 
-<p id="instructions">Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Kasuta otteteid: Tab (liigumine), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+X (lõika), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna). Ära kirjuta lausi käsitsi - kasuta ainult lõikamist ja kleepimist! Sul on aega 55 sekundit.</p>
+<div id="instructions"></div>
+<script>
+const macInstructions = /Mac|iPhone|iPad|iPod/.test(navigator.platform) || /Mac/.test(navigator.userAgent);
+document.getElementById('instructions').innerHTML =
+  '<p>Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Ära kirjuta lauseid käsitsi! Sul on aega 55 sekundit.</p>' +
+  '<ul>' +
+  '<li><b>' + (macInstructions ? '⌘↓' : 'Ctrl+End') + '</b> — liigu teksti lõppu</li>' +
+  '<li><b>' + (macInstructions ? '⌘Shift+←' : 'Shift+Home') + '</b> — vali rida</li>' +
+  '<li><b>' + (macInstructions ? '⌘X' : 'Ctrl+X') + '</b> — lõika</li>' +
+  '<li><b>' + (macInstructions ? '⌘↑' : 'Ctrl+Home') + '</b> — liigu teksti algusesse</li>' +
+  '<li><b>' + (macInstructions ? '⌘V' : 'Ctrl+V') + '</b> — kleebi</li>' +
+  '<li><b>Tab</b> — liigu järgmisesse kasti</li>' +
+  '</ul>';
+</script>
 
 <div class="typing-warning" id="typing-warning">Kasuta lõikamist ja kleepimist, ära kirjuta käsitsi!</div>
 <div class="help-bubble hidden" id="help-bubble"></div>
@@ -140,6 +174,7 @@ let timerInterval  = null;
 let sessionTracker = null;
 const textareas    = [];
 const rows         = <?php echo (int)$rows; ?>;
+const isMac        = /Mac|iPhone|iPad|iPod/.test(navigator.platform) || /Mac/.test(navigator.userAgent);
 
 // Lühijuttude näidised
 const stories = [
@@ -259,7 +294,7 @@ for (let i = 0; i < rows; i++) {
     if (targetPosition === null) return null;
 
     if (textarea.selectionStart !== textarea.selectionEnd) {
-      return 'Ctrl+Home (algusesse)';
+      return isMac ? '⌘↑ (algusesse)' : 'Ctrl+Home (algusesse)';
     }
 
     const firstLineEnd = textarea.value.indexOf('\n');
@@ -267,15 +302,15 @@ for (let i = 0; i < rows; i++) {
     const isOnFirstLine = caretPosition <= (firstLineEnd === -1 ? textarea.value.length : firstLineEnd);
 
     if (!isOnFirstLine) {
-      return 'Ctrl+Home (algusesse)';
+      return isMac ? '⌘↑ (algusesse)' : 'Ctrl+Home (algusesse)';
     }
 
     if (caretPosition < targetPosition) {
-      return 'Ctrl+→';
+      return isMac ? '⌥→' : 'Ctrl+→';
     }
 
     if (caretPosition > targetPosition) {
-      return 'Ctrl+←';
+      return isMac ? '⌥←' : 'Ctrl+←';
     }
 
     return 'Enter (uus rida)';
@@ -291,11 +326,11 @@ for (let i = 0; i < rows; i++) {
       if (enterStepMessage) {
         return enterStepMessage;
       }
-      return isAtStart ? 'Ctrl+V (kleebi)' : 'Ctrl+Home (algusesse)';
+      return isAtStart ? (isMac ? '⌘V (kleebi)' : 'Ctrl+V (kleebi)') : (isMac ? '⌘↑ (algusesse)' : 'Ctrl+Home (algusesse)');
     }
 
     if (textarea.value.trim() === '') {
-      return 'Ctrl+V (kleebi)';
+      return isMac ? '⌘V (kleebi)' : 'Ctrl+V (kleebi)';
     }
 
     if (isCorrectOrder()) {
@@ -303,16 +338,16 @@ for (let i = 0; i < rows; i++) {
     }
 
     if (isReadyForCut()) {
-      return 'Ctrl+X (lõika)';
+      return isMac ? '⌘X (lõika)' : 'Ctrl+X (lõika)';
     }
 
     const hasSelection = textarea.selectionStart !== textarea.selectionEnd;
     if (hasSelection) {
-      return 'Ctrl+End (lõppu)';
+      return isMac ? '⌘↓ (lõppu)' : 'Ctrl+End (lõppu)';
     }
 
     const isAtEnd = textarea.selectionStart === textarea.value.length;
-    return isAtEnd ? 'Shift+Home (vali)' : 'Ctrl+End (lõppu)';
+    return isAtEnd ? (isMac ? '⌘Shift+←  (vali)' : 'Shift+Home (vali)') : (isMac ? '⌘↓ (lõppu)' : 'Ctrl+End (lõppu)');
   }
 
   // Track original non-empty line count to detect cuts even if an empty line remains behind
