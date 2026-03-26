@@ -72,16 +72,9 @@ if ($userEmail) {
 </style>
 
 <p id="instructions">Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Kasuta otteteid: Tab (liigumine), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+X (lõika), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna). Ära kirjuta lausi käsitsi - kasuta ainult lõikamist ja kleepimist! Sul on aega 55 sekundit.</p>
-<script>
-// macOS: näita ⌘/⌥ sümboleid juhendi tekstis
-if (/Mac/i.test(navigator.platform)) {
-    const p = document.getElementById('instructions');
-    p.innerHTML = p.innerHTML
-        .replace(/Ctrl\+/g, '⌘+');
-}
-</script>
 
 <div class="typing-warning" id="typing-warning">Kasuta lõikamist ja kleepimist, ära kirjuta käsitsi!</div>
+<div class="help-bubble hidden" id="help-bubble"></div>
 
 <style>
   .typing-warning {
@@ -96,6 +89,37 @@ if (/Mac/i.test(navigator.platform)) {
     font-weight: bold;
     display: none;
     top: 70px;
+  }
+  .help-bubble {
+    position: absolute;
+    background: #4A90D9;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transform: translateX(-50%);
+    transition: opacity 0.3s, top 0.3s, left 0.3s;
+  }
+  .help-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid #4A90D9;
+  }
+  .help-bubble.hidden {
+    opacity: 0;
+    pointer-events: none;
   }
 </style>
 <form id="task-form">
@@ -195,6 +219,68 @@ for (let i = 0; i < rows; i++) {
   });
 
   textarea.addEventListener('input', handleInput);
+
+  // Help bubble guidance on focus
+  let helpBubbleTimeout = null;
+  textarea.addEventListener('focus', (e) => {
+    const helpBubble = document.getElementById('help-bubble');
+    const rect = textarea.getBoundingClientRect();
+
+    let message = '';
+
+    if (textarea.value.trim() === '') {
+      message = 'Ctrl+V (kleebi)';
+    } else if (textarea.value === textarea.dataset.correct) {
+      message = '✓ Õige!';
+    } else {
+      // Check if cursor is at the end of text
+      const isAtEnd = textarea.selectionStart === textarea.value.length;
+      if (!isAtEnd) {
+        message = 'Ctrl+End (lõppu)';
+      } else {
+        message = 'Ctrl+Shift+Home (vali) → Ctrl+X (lõika)';
+      }
+    }
+
+    helpBubble.textContent = message;
+    helpBubble.classList.remove('hidden');
+    helpBubble.style.left = (rect.left + rect.width / 2) + 'px';
+    helpBubble.style.top = (rect.top - 40) + 'px';
+
+    clearTimeout(helpBubbleTimeout);
+  });
+
+  textarea.addEventListener('blur', (e) => {
+    const helpBubble = document.getElementById('help-bubble');
+    helpBubbleTimeout = setTimeout(() => {
+      helpBubble.classList.add('hidden');
+    }, 300);
+  });
+
+  // Update help bubble when cursor moves
+  textarea.addEventListener('keyup', (e) => {
+    if (document.activeElement !== textarea) return;
+
+    const helpBubble = document.getElementById('help-bubble');
+    const rect = textarea.getBoundingClientRect();
+
+    let message = '';
+    if (textarea.value === textarea.dataset.correct) {
+      message = '✓ Õige!';
+    } else {
+      const isAtEnd = textarea.selectionStart === textarea.value.length;
+      if (!isAtEnd) {
+        message = 'Ctrl+End (lõppu)';
+      } else {
+        message = 'Ctrl+Shift+Home (vali) → Ctrl+X (lõika)';
+      }
+    }
+
+    helpBubble.textContent = message;
+    helpBubble.style.left = (rect.left + rect.width / 2) + 'px';
+    helpBubble.style.top = (rect.top - 40) + 'px';
+  });
+
   textareas.push(textarea);
   tableBody.appendChild(tr);
 }
