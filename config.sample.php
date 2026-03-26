@@ -3,11 +3,10 @@ const AZURE_CLIENT_ID='';
 const AZURE_CLIENT_SECRET='-';
 const BYPASS_AZURE_AUTH=true;
 
-// Google OAuth configuration (for vkok.ee domain)
+// Google OAuth configuration
 const GOOGLE_CLIENT_ID='';
 const GOOGLE_CLIENT_SECRET='';
-const GOOGLE_REDIRECT_URI='https://vkok.ee/riidaja/';
-const VKOK_ADMIN_EMAIL='';
+const GOOGLE_REDIRECT_URI='https://torva.ee/riidaja/login-callback.php?provider=google';
 
 // Admin user configuration
 // Set the email address of the user who should have admin privileges

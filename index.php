@@ -19,36 +19,6 @@ if (!file_exists(__DIR__ . '/config.php') && file_exists(__DIR__ . '/config.samp
 }
 require 'config.php';
 
-use Microsoft\Graph\Graph;
-use Microsoft\Graph\Model;
-use Firebase\JWT\JWT;
-use League\OAuth2\Client\Provider\Google;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Provider setup (Google or Azure)
-// ─────────────────────────────────────────────────────────────────────────────
-
-if (AUTH_PROVIDER === 'google') {
-    $provider = new Google([
-        'clientId'     => GOOGLE_CLIENT_ID,
-        'clientSecret' => GOOGLE_CLIENT_SECRET,
-        'redirectUri'  => GOOGLE_REDIRECT_URI,
-    ]);
-} else {
-    // Allow 5 minutes clock skew between server and Microsoft
-    JWT::$leeway = 300;
-    // Use custom Azure provider with leeway support for clock skew
-    require_once __DIR__ . '/AzureWithLeeway.php';
-    $provider = new AzureWithLeeway([
-        'clientId'               => AZURE_CLIENT_ID,
-        'clientSecret'           => AZURE_CLIENT_SECRET,
-        'scopes'                 => ['openid', 'profile', 'email', 'offline_access', 'User.Read'],
-        'defaultEndPointVersion' => '2.0',
-        'resource'               => 'https://graph.microsoft.com',
-        'tokenLeeway'            => 300  // 5 minutes leeway for server clock skew
-    ]);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Logout handler
 // ─────────────────────────────────────────────────────────────────────────────
@@ -139,7 +109,7 @@ header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
             name: <?= json_encode($_SESSION['user']['name'] ?? '') ?>
         };
         // WebSocket port for session tracking
-        window.RIIDAJA_WS_PORT = <?= AUTH_PROVIDER === 'google' ? 8766 : 8765 ?>;
+        window.RIIDAJA_WS_PORT = <?= ($_SESSION['auth_provider'] ?? 'azure') === 'google' ? 8766 : 8765 ?>;
     </script>
     <script>
         // Clean up URL in browser address bar if it contains authentication parameters
