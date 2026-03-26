@@ -1,3 +1,33 @@
+<?php
+// Determine difficulty based on completion count
+require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/../models/Database.php';
+require_once __DIR__ . '/../models/ResultsModel.php';
+
+$userEmail = $_SESSION['user']['email'] ?? null;
+$exerciseId = $_GET['task'] ?? '002';
+$rows = 8; // Default for first time
+
+if ($userEmail) {
+  $resultsModel = new ResultsModel();
+  $attempts = $resultsModel->getUserAttempts($userEmail, $exerciseId);
+
+  // Count only successful attempts (positive elapsed times)
+  $successfulAttempts = count(array_filter($attempts, function($elapsed) {
+    return (float)$elapsed > 0;
+  }));
+
+  // Progressive difficulty
+  if ($successfulAttempts >= 2) {
+    $rows = 12;
+  } elseif ($successfulAttempts >= 1) {
+    $rows = 10;
+  } else {
+    $rows = 8;
+  }
+}
+?>
+
 <style>
   #sentence-table {
     width: 100%;
@@ -59,7 +89,7 @@ let startTime      = null;
 let timerInterval  = null;
 let sessionTracker = null;
 const textareas    = [];
-const rows         = 12;
+const rows         = <?php echo (int)$rows; ?>;
 
 // Lühijuttude näidised
 const stories = [
