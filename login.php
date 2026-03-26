@@ -16,9 +16,7 @@ if ($provider) {
     require_once __DIR__ . '/config.php';
 
     if ($provider === 'google') {
-        use League\OAuth2\Client\Provider\Google;
-
-        $oauthProvider = new Google([
+        $oauthProvider = new \League\OAuth2\Client\Provider\Google([
             'clientId'     => GOOGLE_CLIENT_ID,
             'clientSecret' => GOOGLE_CLIENT_SECRET,
             'redirectUri'  => 'https://torva.ee/riidaja/login-callback.php?provider=google',
@@ -32,9 +30,7 @@ if ($provider) {
         exit;
 
     } elseif ($provider === 'azure') {
-        use Firebase\JWT\JWT;
-
-        JWT::$leeway = 300;
+        \Firebase\JWT\JWT::$leeway = 300;
         require_once __DIR__ . '/AzureWithLeeway.php';
 
         $oauthProvider = new AzureWithLeeway([
