@@ -55,10 +55,6 @@ if ($userEmail) {
     box-sizing: border-box;
     margin: 0;
     display: block;
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
   }
   .correct {
     background-color: #ccffcc;
@@ -75,32 +71,33 @@ if ($userEmail) {
   }
 </style>
 
-<div style="background-color: #f0f8ff; border: 2px solid #0066cc; border-radius: 8px; padding: 20px; margin: 20px auto; max-width: 800px;">
-  <h3 style="margin-top: 0; color: #0066cc;">📖 Kuidas seda ülesannet teha?</h3>
+<p id="instructions">Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Kasuta otteteid: Tab (liigumine), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+X (lõika), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna). Ära kirjuta lausi käsitsi - kasuta ainult lõikamist ja kleepimist! Sul on aega 55 sekundit.</p>
+<script>
+// macOS: näita ⌘/⌥ sümboleid juhendi tekstis
+if (/Mac/i.test(navigator.platform)) {
+    const p = document.getElementById('instructions');
+    p.innerHTML = p.innerHTML
+        .replace(/Ctrl\+/g, '⌘+');
+}
+</script>
 
-  <p><strong>Ülesande kirjeldus:</strong><br>
-  Vasakul näed algset teksti, paremale pead sama teksti kirjutama, kuid soovitud järjekorras. Kui laused on õiges järjekorras, muutub tekstikasti taust <span style="background-color: #ccffcc; padding: 2px 6px;">roheliseks</span>.</p>
+<div class="typing-warning" id="typing-warning">Kasuta lõikamist ja kleepimist, ära kirjuta käsitsi!</div>
 
-  <p><strong>Samm-sammult juhis:</strong></p>
-  <ol style="line-height: 1.8;">
-    <li><strong>Kliki tekstikastile</strong> - Kliki hiire vasaku nupuga paremal olevasse valge kastile</li>
-    <li><strong>Eemalda vana tekst</strong> - Märgi kõik tekst kombinatsiooniga <kbd>Ctrl</kbd>+<kbd>A</kbd> ja pärast <kbd>Delete</kbd> või <kbd>Backspace</kbd></li>
-    <li><strong>Kirjuta laused õiges järjekorras</strong> - Kirjuta laused täpselt nii nagu vasakul näed, iga lause uuele reale</li>
-    <li><strong>Vajuta Enter</strong> - Lause lõpus vajuta Enter-klahvi, et minna uuele reale</li>
-    <li><strong>Taust muutub roheliseks</strong> - Kui oled kõik õigesti kirjutanud, muutub kastikese taust roheliseks!</li>
-  </ol>
-
-  <p><strong>💡 Nõuanded:</strong></p>
-  <ul style="line-height: 1.8;">
-    <li>Kasuta <strong>suurtähti ja väiketähti</strong> täpselt nii nagu vasakul näed</li>
-    <li>Kasuta <strong>punktuatsiooni</strong> (jutumärgid, punktid jne) täpselt nii nagu vasakul</li>
-    <li>Ära lisa ekstra tühikuid rea algusesse või lõppu</li>
-    <li>Kui eksid, saad kogu teksti kustutada ja uuesti alustada</li>
-    <li>Sul on aega <strong>55 sekundit</strong> - ära kiirusta!</li>
-  </ul>
-</div>
-
-<p style="text-align: center; margin: 20px 0; font-weight: bold;">⬇️ Alusta alltoodud tabeliga ⬇️</p>
+<style>
+  .typing-warning {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    background: #e91e63;
+    z-index: 1000;
+    font-weight: bold;
+    display: none;
+    top: 70px;
+  }
+</style>
 <form id="task-form">
   <table id="sentence-table">
     <thead>
@@ -181,17 +178,23 @@ for (let i = 0; i < rows; i++) {
   `;
 
   const textarea = tr.querySelector('textarea');
+
+  // Block direct typing - show warning instead
+  let typingWarningTimeout = null;
+  textarea.addEventListener('beforeinput', (e) => {
+    // Allow paste, cut, delete, backspace, arrows - block only direct character input
+    if ((e.inputType === 'insertText' || e.inputType === 'insertCompositionText') && e.data !== ' ') {
+      e.preventDefault();
+      const warning = document.getElementById('typing-warning');
+      warning.style.display = 'block';
+      clearTimeout(typingWarningTimeout);
+      typingWarningTimeout = setTimeout(() => {
+        warning.style.display = 'none';
+      }, 3000);
+    }
+  });
+
   textarea.addEventListener('input', handleInput);
-
-  // Prevent text selection in textarea
-  textarea.addEventListener('selectstart', (e) => {
-    e.preventDefault();
-  });
-  textarea.addEventListener('mouseup', (e) => {
-    // Clear any selection
-    document.getSelection().removeAllRanges();
-  });
-
   textareas.push(textarea);
   tableBody.appendChild(tr);
 }
