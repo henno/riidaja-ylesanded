@@ -147,16 +147,26 @@ while (selectedStories.length < rows) {
 for (let i = 0; i < rows; i++) {
   const story = selectedStories[i];
   const shuffledStory = shuffleSentences(story);
-  
+
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td>${i + 1}</td>
     <td class="story-cell">${story}</td>
     <td><textarea data-correct="${story}" class="incorrect">${shuffledStory}</textarea></td>
   `;
-  
+
   const textarea = tr.querySelector('textarea');
   textarea.addEventListener('input', handleInput);
+
+  // Prevent text selection in textarea
+  textarea.addEventListener('selectstart', (e) => {
+    e.preventDefault();
+  });
+  textarea.addEventListener('mouseup', (e) => {
+    // Clear any selection
+    document.getSelection().removeAllRanges();
+  });
+
   textareas.push(textarea);
   tableBody.appendChild(tr);
 }
