@@ -238,6 +238,69 @@ for (let i = 0; i < rows; i++) {
 
   const textarea = tr.querySelector('textarea');
 
+  // Block right-click context menu
+  textarea.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Block mouse-based selection, but keep keyboard selection available
+  let mouseSelectionBlocked = false;
+  let mouseSelectionTimeout = null;
+  let preservedSelection = { start: 0, end: 0 };
+
+  function preserveSelection() {
+    preservedSelection = {
+      start: textarea.selectionStart,
+      end: textarea.selectionEnd
+    };
+  }
+
+  function restoreSelection() {
+    textarea.setSelectionRange(preservedSelection.start, preservedSelection.end);
+  }
+
+  function stopBlockingMouseSelection() {
+    mouseSelectionBlocked = false;
+    clearTimeout(mouseSelectionTimeout);
+  }
+
+  function blockMouseSelection(e) {
+    preserveSelection();
+    mouseSelectionBlocked = true;
+    clearTimeout(mouseSelectionTimeout);
+    mouseSelectionTimeout = setTimeout(() => {
+      mouseSelectionBlocked = false;
+    }, 150);
+
+    e.preventDefault();
+    textarea.focus();
+
+    requestAnimationFrame(() => {
+      if (mouseSelectionBlocked) {
+        restoreSelection();
+      }
+    });
+  }
+
+  textarea.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    blockMouseSelection(e);
+  });
+  textarea.addEventListener('click', () => {
+    requestAnimationFrame(() => {
+      if (mouseSelectionBlocked) {
+        restoreSelection();
+      }
+    });
+  });
+  textarea.addEventListener('dblclick', blockMouseSelection);
+  textarea.addEventListener('select', () => {
+    if (mouseSelectionBlocked) {
+      restoreSelection();
+    }
+  });
+  textarea.addEventListener('keydown', stopBlockingMouseSelection);
+  textarea.addEventListener('dragstart', (e) => e.preventDefault());
+  textarea.addEventListener('drop', (e) => e.preventDefault());
+
   // Block direct typing - show warning instead
   let typingWarningTimeout = null;
   textarea.addEventListener('beforeinput', (e) => {
