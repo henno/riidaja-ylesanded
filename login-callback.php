@@ -9,7 +9,11 @@ use Microsoft\Graph\Model;
 use Firebase\JWT\JWT;
 use League\OAuth2\Client\Provider\Google;
 
-$provider = $_GET['provider'] ?? null;
+$provider = $_GET['provider'] ?? ($_SESSION['oauth2provider'] ?? null);
+
+if (!$provider && isset($_GET['code'])) {
+    $provider = 'azure';
+}
 
 if (!$provider) {
     header('Location: login.php');
@@ -22,18 +26,25 @@ if (!isset($_GET['code'])) {
 }
 
 if ($provider === 'google') {
+    $googleRedirectUri = (defined('GOOGLE_REDIRECT_URI') && GOOGLE_REDIRECT_URI)
+        ? GOOGLE_REDIRECT_URI
+        : 'https://torva.ee/riidaja/login-callback.php?provider=google';
+
     $oauthProvider = new Google([
         'clientId'     => GOOGLE_CLIENT_ID,
         'clientSecret' => GOOGLE_CLIENT_SECRET,
-        'redirectUri'  => 'https://torva.ee/riidaja/login-callback.php?provider=google',
+        'redirectUri'  => $googleRedirectUri,
     ]);
 
-    if (empty($_GET['state']) || $_GET['state'] !== $_SESSION['oauth2state'] ?? null) {
+    $sessionState = $_SESSION['oauth2state'] ?? null;
+    if (empty($_GET['state']) || $_GET['state'] !== $sessionState) {
         unset($_SESSION['oauth2state']);
+        unset($_SESSION['oauth2provider']);
         http_response_code(403);
         exit('Invalid state');
     }
     unset($_SESSION['oauth2state']);
+    unset($_SESSION['oauth2provider']);
 
     try {
         $token = $oauthProvider->getAccessToken('authorization_code', ['code' => $_GET['code']]);
@@ -71,12 +82,15 @@ if ($provider === 'google') {
         'tokenLeeway'            => 300,
     ]);
 
-    if (empty($_GET['state']) || $_GET['state'] !== $_SESSION['oauth2state'] ?? null) {
+    $sessionState = $_SESSION['oauth2state'] ?? null;
+    if (empty($_GET['state']) || $_GET['state'] !== $sessionState) {
         unset($_SESSION['oauth2state']);
+        unset($_SESSION['oauth2provider']);
         http_response_code(403);
         exit('Invalid state');
     }
     unset($_SESSION['oauth2state']);
+    unset($_SESSION['oauth2provider']);
 
     try {
         $token = $oauthProvider->getAccessToken('authorization_code', ['code' => $_GET['code']]);

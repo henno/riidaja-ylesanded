@@ -1,6 +1,28 @@
 <?php
 session_start();
 
+function redirectOAuthCallbackToHandler($defaultProvider = null)
+{
+    $provider = $_GET['provider'] ?? ($_SESSION['oauth2provider'] ?? $defaultProvider);
+    if (!$provider) {
+        return;
+    }
+
+    $params = $_GET;
+    $params['provider'] = $provider;
+
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    header('Location: login-callback.php?' . http_build_query($params));
+    exit;
+}
+
+// Support OAuth callbacks that still land on login.php.
+if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
+    redirectOAuthCallbackToHandler('azure');
+}
+
 // If already logged in, redirect to main page
 if (isset($_SESSION['accessToken'])) {
     header('Location: ./');
@@ -16,15 +38,20 @@ if ($provider) {
     require_once __DIR__ . '/config.php';
 
     if ($provider === 'google') {
+        $googleRedirectUri = (defined('GOOGLE_REDIRECT_URI') && GOOGLE_REDIRECT_URI)
+            ? GOOGLE_REDIRECT_URI
+            : 'https://torva.ee/riidaja/login-callback.php?provider=google';
+
         $oauthProvider = new \League\OAuth2\Client\Provider\Google([
             'clientId'     => GOOGLE_CLIENT_ID,
             'clientSecret' => GOOGLE_CLIENT_SECRET,
-            'redirectUri'  => 'https://torva.ee/riidaja/login-callback.php?provider=google',
+            'redirectUri'  => $googleRedirectUri,
         ]);
 
         $authUrl = $oauthProvider->getAuthorizationUrl([
             'scope' => ['openid', 'profile', 'email'],
         ]);
+        $_SESSION['oauth2provider'] = 'google';
         $_SESSION['oauth2state'] = $oauthProvider->getState();
         header('Location: ' . $authUrl);
         exit;
@@ -43,6 +70,7 @@ if ($provider) {
         ]);
 
         $authUrl = $oauthProvider->getAuthorizationUrl(['prompt' => 'select_account']);
+        $_SESSION['oauth2provider'] = 'azure';
         $_SESSION['oauth2state'] = $oauthProvider->getState();
         header('Location: ' . $authUrl);
         exit;

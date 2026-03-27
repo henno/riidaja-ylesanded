@@ -2,6 +2,18 @@
 session_start();
 date_default_timezone_set('Europe/Tallinn');
 
+if (isset($_GET['code']) || isset($_GET['state']) || isset($_GET['session_state'])) {
+    $callbackProvider = $_GET['provider'] ?? ($_SESSION['oauth2provider'] ?? 'azure');
+    $callbackParams = $_GET;
+    $callbackParams['provider'] = $callbackProvider;
+
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: Thu, 01 Jan 1970 00:00:00 GMT');
+    header('Location: login-callback.php?' . http_build_query($callbackParams));
+    exit;
+}
+
 // Domain detection and database path setup (MUST be before other requires)
 require_once __DIR__ . '/bootstrap.php';
 
