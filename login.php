@@ -167,27 +167,6 @@ if ($provider) {
             transform: translateY(-2px);
         }
 
-        .icon {
-            width: 20px;
-            height: 20px;
-            display: inline-block;
-        }
-
-        .info-box {
-            background: #f0f4f8;
-            padding: 15px;
-            border-radius: 6px;
-            margin-top: 20px;
-            font-size: 13px;
-            color: #555;
-            line-height: 1.5;
-        }
-
-        .info-box strong {
-            display: block;
-            margin-bottom: 5px;
-            color: #333;
-        }
     </style>
 </head>
 <body>
@@ -197,23 +176,11 @@ if ($provider) {
 
         <div class="login-buttons">
             <a href="?provider=azure" class="login-btn azure-btn">
-                <span>Logi sisse Azure'ga</span>
-                <span class="icon">🔐</span>
+                Logi sisse @torva.edu.ee kontoga
             </a>
             <a href="?provider=google" class="login-btn google-btn">
-                <span>Logi sisse Google'ga</span>
-                <span class="icon">G</span>
+                Logi sisse @vkok.ee kontoga
             </a>
-        </div>
-
-        <div class="info-box">
-            <strong>Azure login:</strong>
-            Torva kooli õpilastele (@torva.edu.ee)
-        </div>
-
-        <div class="info-box">
-            <strong>Google login:</strong>
-            Vkok.ee ja muude koolide õpilastele
         </div>
     </div>
 </body>
