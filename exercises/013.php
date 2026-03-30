@@ -86,6 +86,10 @@
         transform: translateX(-50%);
         transition: transform 0.18s ease, filter 0.18s ease, opacity 0.18s ease;
     }
+    .balloon-slot.consumed {
+        opacity: 0;
+        pointer-events: none;
+    }
     .balloon-slot.active {
         transform: translateX(-50%) scale(1.05);
         filter: drop-shadow(0 0 18px rgba(255, 244, 174, 0.78));
@@ -638,7 +642,7 @@
         <div class="scene-instruction">
             Vajuta tähte
             <span class="current-target" id="current-target">a</span>
-            <div class="scene-subtitle">Kollased nooled näitavad aktiivset õhupalli</div>
+            <div class="scene-subtitle">Kollased nooled näitavad aktiivset õhupalli, hiljem jääb see keskele</div>
         </div>
         <div class="player-rig" id="player-rig">
             <div class="player-balloon"></div>
@@ -734,7 +738,16 @@
     const STORAGE_KEY = 'exercise013_fixed_sequence';
     const STORAGE_CHECKBOX_KEY = 'exercise013_fixed_enabled';
     const ACTIVE_CENTER_INDEX = 3;
-    const LETTER_POOL = ['a', 's', 'd', 'f', 'j', 'k', 'l', 'ä', 'ö', 'õ', 'ü', 'u'];
+    const LETTER_POOL = [
+        'a', 'a', 'a', 'a', 'a', 'a', 'a',
+        's', 's', 's', 's', 's',
+        'd', 'd', 'd', 'd',
+        'f', 'f',
+        'l', 'l', 'l',
+        'k',
+        'ö',
+        'ä'
+    ];
     const BALLOON_COLORS = ['#b98be4', '#f56b4f', '#ffd55d', '#7595e8', '#ff845b', '#9f7be8', '#7cb2ff', '#f2ad46'];
     const BALLOON_SLOTS = [
         { left: 8, top: 54 },
@@ -808,7 +821,6 @@
     let sequence = getSequence();
     let currentIndex = 0;
     let rowStartIndex = 0;
-    let emptiedBalloonIndex = null;
     let correctChars = 0;
     let totalChars = 0;
     let errors = 0;
@@ -873,13 +885,17 @@
         BALLOON_SLOTS.forEach((slot, index) => {
             const absoluteIndex = rowStartIndex + index;
             const isActive = absoluteIndex === currentIndex;
-            const displayLetter = absoluteIndex === emptiedBalloonIndex ? '' : visibleLetters[index];
+            const isConsumed = absoluteIndex < currentIndex;
+            const displayLetter = isConsumed ? '' : visibleLetters[index];
             const slotDiv = createBalloonMarkup(
                 displayLetter,
                 BALLOON_COLORS[index % BALLOON_COLORS.length],
                 isActive,
                 slot
             );
+            if (isConsumed) {
+                slotDiv.classList.add('consumed');
+            }
             slotDiv.dataset.color = BALLOON_COLORS[index % BALLOON_COLORS.length];
             slotDiv.dataset.sequenceIndex = absoluteIndex;
             balloonRow.appendChild(slotDiv);
@@ -897,7 +913,7 @@
         }
         isTestActive = true;
         startTime = Date.now();
-        hintBanner.textContent = 'Mäng käib. Vajuta alati vasakpoolset esile toodud tähte.';
+        hintBanner.textContent = 'Mäng käib. Vajuta noolega esile tõstetud tähte.';
         timerInterval = setInterval(updateStats, 100);
         if (window.SessionTracker && window.RIIDAJA_USER) {
             sessionTracker = new SessionTracker(
@@ -1050,7 +1066,7 @@
     function handleWrongInput() {
         errors++;
         totalChars++;
-        hintBanner.textContent = 'Vale täht. Vaata vasakpoolset noolega õhupalli ja proovi uuesti.';
+        hintBanner.textContent = 'Vale täht. Vaata noolega esile tõstetud õhupalli ja proovi uuesti.';
 
         if (activeBalloonSlot) {
             activeBalloonSlot.classList.remove('wrong');
@@ -1066,7 +1082,6 @@
         const pressedBalloon = activeBalloonSlot;
         correctChars++;
         totalChars++;
-        emptiedBalloonIndex = currentIndex;
         currentIndex++;
         hintBanner.textContent = 'Õige. Ninja hüppab uue õhupalli külge ja hakkab kohe alla vajuma.';
         attachPlayerToBalloon(pressedBalloon);
