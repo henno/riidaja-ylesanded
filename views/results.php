@@ -89,6 +89,38 @@ if ($emailFilter && $exerciseFilter) {
   tr.day-odd td {
     background-color: #e8e8e8;
   }
+  .bulk-actions {
+    margin: 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bulk-delete-btn {
+    background: #f44336;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .bulk-delete-btn:hover {
+    background: #d32f2f;
+  }
+  .bulk-delete-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  #select-all {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+  }
+  .row-checkbox {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+  }
 </style>
 
 <table>
@@ -108,8 +140,9 @@ if ($emailFilter && $exerciseFilter) {
         $resultColumnHeader = 'Tulemus';
     }
     ?>
-    <tr><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th><?= $resultColumnHeader ?></th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
+    <tr><?php if ($isAdmin) echo '<th></th>'; ?><th>Ajatempel</th><th>Õpilane</th><th>Email</th><th>Harjutus</th><th><?= $resultColumnHeader ?></th><?php if ($isAdmin) echo '<th></th>'; ?></tr>
     <tr class="filter-row">
+      <?php if ($isAdmin): ?><td></td><?php endif; ?>
       <td>
         <div class="filter-wrapper">
           <input type="date" id="filter-date" title="Filtreeri kuupäeva järgi">
@@ -159,7 +192,8 @@ if ($emailFilter && $exerciseFilter) {
   <tbody>
   <?php foreach ($results as $row): ?>
     <?php $formatted = date('d.m.Y H:i', strtotime($row['timestamp'])); ?>
-    <tr>
+    <tr data-id="<?= $row['id'] ?>">
+      <?php if ($isAdmin): ?><td><input type="checkbox" class="row-checkbox" value="<?= $row['id'] ?>"></td><?php endif; ?>
       <td><?= $formatted ?></td>
       <td><?= htmlspecialchars($row['name']) ?></td>
       <td><?= htmlspecialchars($row['email']) ?></td>
@@ -203,6 +237,13 @@ if ($emailFilter && $exerciseFilter) {
   <?php endforeach; ?>
   </tbody>
 </table>
+<?php if ($isAdmin): ?>
+<div class="bulk-actions" id="bulk-actions" style="display: none;">
+  <input type="checkbox" id="select-all" title="Vali kõik nähtavad">
+  <button class="bulk-delete-btn" id="bulk-delete-btn" disabled>Kustuta valitud</button>
+  <span id="selected-count"></span>
+</div>
+<?php endif; ?>
 <script>
   // Toggle between summary and detailed view
   document.getElementById('summary-toggle').addEventListener('change', function() {
@@ -435,6 +476,88 @@ if ($emailFilter && $exerciseFilter) {
   }
 
   applyDayColors();
+
+  // Select all / bulk delete functionality
+  const selectAll = document.getElementById('select-all');
+  const bulkActions = document.getElementById('bulk-actions');
+  const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+  const selectedCount = document.getElementById('selected-count');
+
+  function updateBulkUI() {
+    const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+    const visibleCheckboxes = Array.from(document.querySelectorAll('.row-checkbox')).filter(cb => cb.closest('tr').style.display !== 'none');
+    const checkedCount = checkboxes.length;
+    
+    if (visibleCheckboxes.length > 0) {
+      bulkActions.style.display = 'flex';
+    } else {
+      bulkActions.style.display = 'none';
+    }
+    
+    bulkDeleteBtn.disabled = checkedCount === 0;
+    selectedCount.textContent = checkedCount > 0 ? `(${checkedCount} valitud)` : '';
+    
+    // Update select all checkbox state
+    if (visibleCheckboxes.length === 0) {
+      selectAll.checked = false;
+      selectAll.indeterminate = false;
+    } else {
+      const allChecked = visibleCheckboxes.every(cb => cb.checked);
+      const someChecked = visibleCheckboxes.some(cb => cb.checked);
+      selectAll.checked = allChecked;
+      selectAll.indeterminate = someChecked && !allChecked;
+    }
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function() {
+      const visibleCheckboxes = Array.from(document.querySelectorAll('.row-checkbox')).filter(cb => cb.closest('tr').style.display !== 'none');
+      visibleCheckboxes.forEach(cb => cb.checked = this.checked);
+      updateBulkUI();
+    });
+  }
+
+  document.querySelectorAll('.row-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateBulkUI);
+  });
+
+  // Apply day colors after filter changes
+  const originalApplyFilters = applyFilters;
+  applyFilters = function() {
+    originalApplyFilters();
+    applyDayColors();
+    updateBulkUI();
+  };
+
+  if (bulkDeleteBtn) {
+    bulkDeleteBtn.addEventListener('click', async function() {
+      const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+      const ids = Array.from(checkboxes).map(cb => cb.value);
+      if (ids.length === 0 || !confirm(`Kustuta ${ids.length} kirjet?`)) return;
+      
+      try {
+        let deleted = 0;
+        for (const id of ids) {
+          const res = await fetch('?page=api&action=delete_result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+          });
+          const data = await res.json();
+          if (data.success) {
+            deleted++;
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if (row) row.remove();
+          }
+        }
+        updateBulkUI();
+      } catch (e) {
+        alert('Viga kustutamisel');
+      }
+    });
+  }
+
+  updateBulkUI();
 
   // Delete result via AJAX
   document.querySelectorAll('.delete-link').forEach(btn => {
