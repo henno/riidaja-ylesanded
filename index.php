@@ -88,9 +88,21 @@ $isAdmin = isset($_SESSION['user']['email']) && (
 $resultsModel = new ResultsModel();
 $studentsModel = new StudentsModel();
 
-if ($isAdmin && isset($_GET['delete'])) {
-    $resultsModel->delete((int)$_GET['delete']);
-    header('Location: ?page=results');
+if (isset($_GET['page']) && $_GET['page'] === 'api' && isset($_GET['action']) && $_GET['action'] === 'delete_result' && $isAdmin) {
+    header('Content-Type: application/json');
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $data = json_decode(file_get_contents('php://input'), true);
+        if (isset($data['id'])) {
+            $resultsModel->delete((int)$data['id']);
+            echo json_encode(['success' => true]);
+        } else {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing id']);
+        }
+    } else {
+        http_response_code(405);
+        echo json_encode(['error' => 'Method not allowed']);
+    }
     exit;
 }
 

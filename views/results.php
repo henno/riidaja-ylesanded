@@ -197,7 +197,7 @@ if ($emailFilter && $exerciseFilter) {
         <?php endif; ?>
       <?php endif; ?>
       <?php if ($isAdmin): ?>
-        <td><a class="delete-link" href="?page=results&delete=<?= $row['id'] ?>" onclick="return confirm('Kustuta see kirje?')">🗑</a></td>
+        <td><button class="delete-link btn btn-link p-0 border-0" data-id="<?= $row['id'] ?>">🗑</button></td>
       <?php endif; ?>
     </tr>
   <?php endforeach; ?>
@@ -435,4 +435,26 @@ if ($emailFilter && $exerciseFilter) {
   }
 
   applyDayColors();
+
+  // Delete result via AJAX
+  document.querySelectorAll('.delete-link').forEach(btn => {
+    btn.addEventListener('click', async function() {
+      if (!confirm('Kustuta see kirje?')) return;
+      const id = this.dataset.id;
+      try {
+        const res = await fetch('?page=api&action=delete_result', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          const row = this.closest('tr');
+          row.remove();
+        }
+      } catch (e) {
+        alert('Viga kustutamisel');
+      }
+    });
+  });
   </script>
