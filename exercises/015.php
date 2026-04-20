@@ -1,4 +1,20 @@
+<?php
+require_once __DIR__ . '/../models/ResultsModel.php';
 
+$resultsModel = new ResultsModel();
+$userEmail = $_SESSION['user']['email'] ?? '';
+
+$passedAttempts = $resultsModel->getAllByEmailAndExercise($userEmail, '015');
+$passCount = 0;
+foreach ($passedAttempts as $attempt) {
+    if ($attempt['elapsed'] > 0) {
+        $passCount++;
+    }
+}
+$passCount = min($passCount, 3);
+$currentLevel = $passCount >= 2 ? 3 : ($passCount >= 1 ? 2 : 1);
+$requiredWpmForLevel = $currentLevel === 3 ? 25 : ($currentLevel === 2 ? 17 : 10);
+?>
 <style>
     #typing-area {
         width: 100%;
@@ -218,7 +234,7 @@
 </style>
 
 <p>Pimekirjutamise harjutus kirjavahemärkidega. Kirjuta allolevas tekstikastis ülemises kastis kuvatav tekst — kaasa arvatud märgid ' ; : " ! ?. Vale klahvi vajutamisel ei saa edasi – kustuta viga. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 17, Täpsus ≥ 97%</p>
+<p class="requirements" id="requirements">Raund <?= $currentLevel ?> / 3 — Nõuded: WPM ≥ <?= $requiredWpmForLevel ?>, Täpsus ≥ 97%. Läbimised: <?= $passCount ?> / 3.</p>
 
 <div class="options-row">
     <label><input type="checkbox" id="fixed-text-toggle"> Sama tekst igal korral</label>
@@ -276,6 +292,10 @@
                 <span class="result-stat-label">Vead:</span>
                 <span class="result-stat-value" id="result-errors">0</span>
             </div>
+            <div class="result-stat-row">
+                <span class="result-stat-label">Läbimised:</span>
+                <span class="result-stat-value" id="result-completions">0 / 3</span>
+            </div>
         </div>
         <div class="result-message" id="result-message"></div>
         <button class="result-btn primary" id="result-btn" onclick="closeModal()">Jätka</button>
@@ -283,11 +303,22 @@
 </div>
 
 <script>
-    const REQUIRED_WPM = 17;
+    const REQUIRED_WPM_LEVEL_1 = 10;
+    const REQUIRED_WPM_LEVEL_2 = 17;
+    const REQUIRED_WPM_LEVEL_3 = 25;
     const REQUIRED_ACCURACY = 97;
     const TIME_LIMIT = 30;
     const STORAGE_KEY = 'exercise015_fixed_text';
     const STORAGE_CHECKBOX_KEY = 'exercise015_fixed_enabled';
+
+    let completionCount = <?= $passCount ?>;
+    let currentLevel = <?= $currentLevel ?>;
+
+    function getRequiredWpm() {
+        if (currentLevel === 3) return REQUIRED_WPM_LEVEL_3;
+        if (currentLevel === 2) return REQUIRED_WPM_LEVEL_2;
+        return REQUIRED_WPM_LEVEL_1;
+    }
 
     const estonianSentences = [
         'Kui ilus päev täna!',
@@ -474,10 +505,11 @@
             timerDisplay.className = 'stat-value';
         }
 
+        const requiredWpm = getRequiredWpm();
         wpmDisplay.textContent = wpm;
-        if (wpm >= REQUIRED_WPM) {
+        if (wpm >= requiredWpm) {
             wpmDisplay.className = 'stat-value success';
-        } else if (wpm >= REQUIRED_WPM * 0.7) {
+        } else if (wpm >= requiredWpm * 0.7) {
             wpmDisplay.className = 'stat-value warning';
         } else {
             wpmDisplay.className = 'stat-value danger';
@@ -510,7 +542,8 @@
         const wpm = minutes > 0 ? Math.round((correctChars / 5) / minutes) : 0;
         const accuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 100;
 
-        const passed = wpm >= REQUIRED_WPM && accuracy >= REQUIRED_ACCURACY;
+        const requiredWpm = getRequiredWpm();
+        const passed = wpm >= requiredWpm && accuracy >= REQUIRED_ACCURACY;
 
         fetch('save_result.php', {
             method: 'POST',
@@ -531,12 +564,13 @@
         const resultErrors = document.getElementById('result-errors');
         const resultMessage = document.getElementById('result-message');
 
-        resultReqWpm.textContent = REQUIRED_WPM;
+        resultReqWpm.textContent = requiredWpm;
         resultReqAccuracy.textContent = REQUIRED_ACCURACY + '%';
         resultErrors.textContent = errors;
+        document.getElementById('result-completions').textContent = (passed ? Math.min(completionCount + 1, 3) : completionCount) + ' / 3';
 
         resultWpm.textContent = wpm;
-        resultWpm.className = 'result-stat-value ' + (wpm >= REQUIRED_WPM ? 'passed' : 'failed');
+        resultWpm.className = 'result-stat-value ' + (wpm >= requiredWpm ? 'passed' : 'failed');
 
         resultAccuracy.textContent = accuracy + '%';
         resultAccuracy.className = 'result-stat-value ' + (accuracy >= REQUIRED_ACCURACY ? 'passed' : 'failed');
@@ -550,7 +584,7 @@
             resultTitle.textContent = 'LÄBIMATA';
             resultTitle.className = 'failed';
             let failReasons = [];
-            if (wpm < REQUIRED_WPM) failReasons.push(`WPM on liiga madal (${wpm} < ${REQUIRED_WPM})`);
+            if (wpm < requiredWpm) failReasons.push(`WPM on liiga madal (${wpm} < ${requiredWpm})`);
             if (accuracy < REQUIRED_ACCURACY) failReasons.push(`Täpsus on liiga madal (${accuracy}% < ${REQUIRED_ACCURACY}%)`);
             resultMessage.textContent = failReasons.join('. ') + '. Proovi uuesti!';
             resultMessage.className = 'result-message failure';
