@@ -82,7 +82,7 @@ class ResultsController {
       }
 
       $showSummary = false; // Set this for the toggle in the view
-      // Make sure $emailFilter and $activeTab are available in the view
+      $allExercises = $this->resultsModel->getAllExercisesInfo();
       include __DIR__ . '/../views/results.php';
     }
   }

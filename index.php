@@ -80,29 +80,49 @@ if (defined('BYPASS_AZURE_AUTH') && BYPASS_AZURE_AUTH === true) {
 // Admin check
 // ─────────────────────────────────────────────────────────────────────────────
 
-$isAdmin = isset($_SESSION['user']['email']) && (
-    $_SESSION['user']['email'] === ADMIN_EMAIL ||
-    (defined('VKOK_ADMIN_EMAIL') && VKOK_ADMIN_EMAIL && $_SESSION['user']['email'] === VKOK_ADMIN_EMAIL)
-);
+$isAdmin = isset($_SESSION['user']['email']) && $_SESSION['user']['email'] === ADMIN_EMAIL;
 
 $resultsModel = new ResultsModel();
 $studentsModel = new StudentsModel();
 
-if (isset($_GET['page']) && $_GET['page'] === 'api' && isset($_GET['action']) && $_GET['action'] === 'delete_result' && $isAdmin) {
+if (isset($_GET['page']) && $_GET['page'] === 'api') {
     header('Content-Type: application/json');
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        $data = json_decode(file_get_contents('php://input'), true);
-        if (isset($data['id'])) {
-            $resultsModel->delete((int)$data['id']);
-            echo json_encode(['success' => true]);
+    
+    if ($_GET['action'] === 'delete_result' && $isAdmin) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $data = json_decode(file_get_contents('php://input'), true);
+            if (isset($data['id'])) {
+                $resultsModel->delete((int)$data['id']);
+                echo json_encode(['success' => true]);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'Missing id']);
+            }
         } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'Missing id']);
+            http_response_code(405);
+            echo json_encode(['error' => 'Method not allowed']);
         }
-    } else {
-        http_response_code(405);
-        echo json_encode(['error' => 'Method not allowed']);
+        exit;
     }
+    
+    if ($_GET['action'] === 'get_results') {
+        $filters = [];
+        if (!empty($_GET['exercise'])) $filters['exercise'] = $_GET['exercise'];
+        if (!empty($_GET['email'])) $filters['email'] = $_GET['email'];
+        if (!empty($_GET['date'])) $filters['date'] = $_GET['date'];
+        if (!empty($_GET['name'])) $filters['name'] = $_GET['name'];
+        if (!empty($_GET['include_failures'])) $filters['include_failures'] = true;
+        
+        $results = $resultsModel->getFiltered($filters);
+        $allExercises = $resultsModel->getAllExercisesInfo();
+        
+        echo json_encode([
+            'results' => $results,
+            'allExercises' => $allExercises
+        ]);
+        exit;
+    }
+    
     exit;
 }
 

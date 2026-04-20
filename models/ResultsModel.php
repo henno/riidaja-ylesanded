@@ -120,6 +120,45 @@ class ResultsModel {
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
+  public function getFiltered($filters = []) {
+    $sql = 'SELECT * FROM results WHERE 1=1';
+    $params = [];
+
+    $includeFailures = !empty($filters['include_failures']);
+    if (!$includeFailures) {
+      $sql .= ' AND elapsed > 0';
+    }
+
+    if (!empty($filters['exercise'])) {
+      $numericId = (int)$filters['exercise'];
+      $sql .= ' AND (exercise_id = ? OR exercise_id = ?)';
+      $params[] = $filters['exercise'];
+      $params[] = $numericId;
+    }
+
+    if (!empty($filters['email'])) {
+      $sql .= ' AND email LIKE ?';
+      $params[] = '%' . $filters['email'] . '%';
+    }
+
+    if (!empty($filters['date'])) {
+      $sql .= ' AND DATE(timestamp) = ?';
+      $params[] = $filters['date'];
+    }
+
+    if (!empty($filters['name'])) {
+      $sql .= ' AND (name LIKE ? OR email LIKE ?)';
+      $params[] = '%' . $filters['name'] . '%';
+      $params[] = '%' . $filters['name'] . '%';
+    }
+
+    $sql .= ' ORDER BY timestamp DESC';
+
+    $stmt = $this->db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
   public function delete($id) {
     $stmt = $this->db->prepare('DELETE FROM results WHERE id = ?');
     return $stmt->execute([$id]);
