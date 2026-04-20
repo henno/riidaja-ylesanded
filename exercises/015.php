@@ -128,6 +128,37 @@ $requiredWpmForLevel = $currentLevel === 3 ? 25 : ($currentLevel === 2 ? 17 : 10
     .input-shake {
         animation: shake 0.2s;
     }
+    .help-bubble {
+        position: absolute;
+        background: #4A90D9;
+        color: white;
+        padding: 6px 14px;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: bold;
+        white-space: nowrap;
+        z-index: 100;
+        pointer-events: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        transform: translateX(-50%);
+        transition: opacity 0.15s, top 0.15s, left 0.15s;
+    }
+    .help-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 8px solid #4A90D9;
+    }
+    .help-bubble.hidden {
+        opacity: 0;
+        pointer-events: none;
+    }
     /* Result Modal */
     .result-modal {
         position: fixed;
@@ -244,6 +275,7 @@ $requiredWpmForLevel = $currentLevel === 3 ? 25 : ($currentLevel === 2 ? 17 : 10
     <div class="original-text" id="original-text"></div>
     <textarea id="typing-input" placeholder="Hakka siia kirjutama..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
 </div>
+<div class="help-bubble hidden" id="help-bubble"></div>
 
 <div id="progress-info">
     <div class="stat-row">
@@ -469,7 +501,44 @@ $requiredWpmForLevel = $currentLevel === 3 ? 25 : ($currentLevel === 2 ? 17 : 10
                 charSpans[i].classList.add('current');
             }
         }
+        updatePunctHint(matchCount, errorPos);
     }
+
+    const PUNCT_HINTS = {
+        '!': 'Shift + 1',
+        '"': 'Shift + 2',
+        "'": "' klahv (Ä kõrval)",
+        ';': 'Shift + ,',
+        ':': 'Shift + .',
+        '?': 'Shift + ´'
+    };
+    const helpBubble = document.getElementById('help-bubble');
+    let bubbleTargetIndex = -1;
+
+    function updatePunctHint(matchCount, errorPos) {
+        if (currentLevel !== 1) { helpBubble.classList.add('hidden'); bubbleTargetIndex = -1; return; }
+        if (errorPos !== -1) { helpBubble.classList.add('hidden'); bubbleTargetIndex = -1; return; }
+        const i = matchCount;
+        if (i >= originalText.length) { helpBubble.classList.add('hidden'); bubbleTargetIndex = -1; return; }
+        const hint = PUNCT_HINTS[originalText[i]];
+        if (!hint) { helpBubble.classList.add('hidden'); bubbleTargetIndex = -1; return; }
+        bubbleTargetIndex = i;
+        helpBubble.textContent = hint;
+        positionBubble();
+    }
+
+    function positionBubble() {
+        if (bubbleTargetIndex < 0) return;
+        const target = charSpans[bubbleTargetIndex];
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        helpBubble.style.left = (rect.left + rect.width / 2 + window.scrollX) + 'px';
+        helpBubble.style.top = (rect.top + window.scrollY - 40) + 'px';
+        helpBubble.classList.remove('hidden');
+    }
+
+    window.addEventListener('scroll', positionBubble);
+    window.addEventListener('resize', positionBubble);
 
     function startTest() {
         if (!isTestActive) {
@@ -674,5 +743,6 @@ $requiredWpmForLevel = $currentLevel === 3 ? 25 : ($currentLevel === 2 ? 17 : 10
 
     // Initialize
     initializeDisplay();
+    updatePunctHint(0, -1);
     typingInput.focus();
 </script>
