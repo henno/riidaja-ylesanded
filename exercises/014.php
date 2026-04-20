@@ -347,13 +347,9 @@ $passCount = min($passCount, 3);
             <span class="stat-label">SÕNU:</span>
             <span class="stat-value" id="words-display">0</span>
         </div>
-        <div class="stat-item">
-            <span class="stat-label">KIIRUS:</span>
-            <span class="stat-value" id="speed-display">1.0x</span>
-        </div>
     </div>
 
-    <p class="hint-text">Vajuta sõna esimest tähte selleks, et lukustada ja kirjutada. Kui sõna jõuab alla, kiireneb mäng!</p>
+    <p class="hint-text">Vajuta sõna esimest tähte selleks, et lukustada ja kirjutada. Iga valesti vajutatud klahv lükkab sõnad allapoole!</p>
 </div>
 
 <div class="result-modal" id="result-modal">
@@ -403,6 +399,7 @@ const MAX_WORDS_ON_SCREEN = 10;
 const WORD_SPAWN_INTERVAL = 1500;
 const SPEED_ZONE_TOP = 100;
 const SPEED_ZONE_BOTTOM = 400;
+const WRONG_KEY_DROP = 20;
 const NUM_COLUMNS = 7;
 const COLUMN_MARGIN = 40;
 
@@ -475,7 +472,6 @@ const wpmDisplay = document.getElementById('wpm-display');
 const accuracyDisplay = document.getElementById('accuracy-display');
 const errorsDisplay = document.getElementById('errors-display');
 const wordsDisplay = document.getElementById('words-display');
-const speedDisplay = document.getElementById('speed-display');
 const levelDisplay = document.getElementById('level-display');
 const progressFill = document.getElementById('progress-fill');
 const resultModal = document.getElementById('result-modal');
@@ -490,7 +486,6 @@ let completionCount = <?= $passCount ?>;
 let currentLevel = <?= $passCount ?> >= 2 ? 3 : (<?= $passCount ?> >= 1 ? 2 : 1);
 let lockedWords = [];
 let groundedWords = [];
-let speedMultiplier = 1.0;
 let startTime = null;
 let isGameActive = false;
 let isGameOver = false;
@@ -521,8 +516,13 @@ function getRequiredWpm() {
     return REQUIRED_WPM;
 }
 
-function getInitialSpeedMultiplier() {
-    return currentLevel === 3 ? 1.35 : 1.0;
+function dropActiveInvaders(amount) {
+    invaders.forEach(inv => {
+        if (inv.classList.contains('exploding')) return;
+        const y = parseFloat(inv.dataset.y) + amount;
+        inv.dataset.y = y;
+        inv.style.top = y + 'px';
+    });
 }
 
 function getInitialSpawnCount() {
@@ -764,6 +764,7 @@ function handleKeyPress(key) {
         } else {
             errors++;
             totalChars++;
+            dropActiveInvaders(WRONG_KEY_DROP);
             updateStats();
         }
     } else {
@@ -783,6 +784,7 @@ function handleKeyPress(key) {
         } else {
             errors++;
             totalChars++;
+            dropActiveInvaders(WRONG_KEY_DROP);
         }
         updateStats();
     }
@@ -794,7 +796,6 @@ function startGame() {
     if (isGameActive) return;
     isGameActive = true;
     startTime = Date.now();
-    speedMultiplier = getInitialSpeedMultiplier();
     groundedWords.forEach(gw => gw.remove());
     groundedWords = [];
 
@@ -833,7 +834,7 @@ function gameLoop(timestamp) {
         let y = parseFloat(inv.dataset.y);
         
         const speedFactor = Math.min(1, Math.max(0, (y - SPEED_ZONE_TOP) / (SPEED_ZONE_BOTTOM - SPEED_ZONE_TOP)));
-        const currentSpeed = (FALL_SPEED_MIN + (FALL_SPEED_MAX - FALL_SPEED_MIN) * speedFactor) * speedMultiplier;
+        const currentSpeed = FALL_SPEED_MIN + (FALL_SPEED_MAX - FALL_SPEED_MIN) * speedFactor;
         
         y += currentSpeed * deltaTime;
         inv.dataset.y = y;
@@ -852,10 +853,7 @@ function gameLoop(timestamp) {
             if (lockedWords.length === 0) {
                 invaders.forEach(inv => inv.classList.remove('locked'));
             }
-            
-            // Increase speed by 15%
-            speedMultiplier += 0.15;
-            
+
             // Flash effect on grounded word
             grounded.style.backgroundColor = '#f00';
             grounded.style.color = '#fff';
@@ -931,8 +929,6 @@ function updateStats() {
 
     errorsDisplay.textContent = errors;
     wordsDisplay.textContent = wordsCompleted;
-    speedDisplay.textContent = speedMultiplier.toFixed(1) + 'x';
-    speedDisplay.className = speedMultiplier >= 2 ? 'stat-value danger' : speedMultiplier >= 1.5 ? 'stat-value warning' : 'stat-value';
 
     progressFill.style.width = ((TIME_LIMIT - remainingSeconds) / TIME_LIMIT * 100) + '%';
 
