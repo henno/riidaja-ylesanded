@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('008', [
+    1 => ['sentence_count' => 3, 'time_limit' => 160],
+    2 => ['sentence_count' => 4, 'time_limit' => 140],
+    3 => ['sentence_count' => 6, 'time_limit' => 120],
+]);
+?>
 <style>
     #sentence-table {
         width: 100%;
@@ -112,7 +121,7 @@
     }
 </style>
 
-<p id="instructions">Kopeeri alglause vastuse lahtrisse ja muuda sõnade järjekord õigeks. Kasuta ainult klaviatuuri! Otseteed: Tab (liigu väljade vahel), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna), Ctrl+X (lõika). Sul on aega 120 sekundit.</p>
+<p id="instructions">Raund <?= $roundConfig['round'] ?> / 3. Kopeeri alglause vastuse lahtrisse ja muuda sõnade järjekord õigeks. Kasuta ainult klaviatuuri! Otseteed: Tab (liigu väljade vahel), Ctrl+A (vali kõik), Ctrl+C (kopeeri), Ctrl+V (kleebi), Ctrl+Shift+nooled (vali sõna), Ctrl+X (lõika). Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
 <script>
 // macOS: näita ⌘/⌥ sümboleid juhendi tekstis
 if (/Mac/i.test(navigator.platform)) {
@@ -151,9 +160,11 @@ let startTime = null;
 let timerInterval = null;
 let sessionTracker = null;
 const textareas = [];
+const sentenceCount = <?= (int) $roundConfig['sentence_count'] ?>;
+const timeLimit = <?= (int) $roundConfig['time_limit'] ?>;
 
-// Laused: [segatud, õige] - ainult 4 lauset, lihtsad vahetused
-const sentences = [
+// Laused: [segatud, õige] - lihtsad vahetused
+const allSentences = [
     {
         scrambled: "Väike koer jooksis poole õue",
         correct: "Väike koer jooksis õue poole"
@@ -179,6 +190,7 @@ const sentences = [
         correct: "Vanaisa rääkis õhtul lastele pikki põnevaid vanu lugusid"
     }
 ];
+const sentences = allSentences.slice(0, sentenceCount);
 
 // Loome tabeli read
 sentences.forEach((sentence, i) => {
@@ -298,8 +310,7 @@ function updateTimer() {
     const elapsed = (Date.now() - startTime) / 1000;
     timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
 
-    // Ajapiir 120 sekundit
-    if (elapsed >= 120) {
+    if (elapsed >= timeLimit) {
         clearInterval(timerInterval);
         // Mark session as complete (failed)
         if (sessionTracker) sessionTracker.complete();

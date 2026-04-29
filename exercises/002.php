@@ -1,31 +1,13 @@
 <?php
-// Determine difficulty based on completion count
 require_once __DIR__ . '/../bootstrap.php';
-require_once __DIR__ . '/../models/Database.php';
-require_once __DIR__ . '/../models/ResultsModel.php';
+require_once __DIR__ . '/round_config.php';
 
-$userEmail = $_SESSION['user']['email'] ?? null;
-$exerciseId = $_GET['task'] ?? '002';
-$rows = 8; // Default for first time
-
-if ($userEmail) {
-  $resultsModel = new ResultsModel();
-  $attempts = $resultsModel->getUserAttempts($userEmail, $exerciseId);
-
-  // Count only successful attempts (positive elapsed times)
-  $successfulAttempts = count(array_filter($attempts, function($elapsed) {
-    return (float)$elapsed > 0;
-  }));
-
-  // Progressive difficulty
-  if ($successfulAttempts >= 2) {
-    $rows = 12;
-  } elseif ($successfulAttempts >= 1) {
-    $rows = 10;
-  } else {
-    $rows = 8;
-  }
-}
+$roundConfig = getExerciseRoundConfig('002', [
+  1 => ['rows' => 8, 'time_limit' => 55],
+  2 => ['rows' => 10, 'time_limit' => 55],
+  3 => ['rows' => 12, 'time_limit' => 55],
+]);
+$rows = $roundConfig['rows'];
 ?>
 
 <style>
@@ -96,7 +78,7 @@ if ($userEmail) {
 <script>
 const macInstructions = /Mac|iPhone|iPad|iPod/.test(navigator.platform) || /Mac/.test(navigator.userAgent);
 document.getElementById('instructions').innerHTML =
-  '<p>Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Ära kirjuta lauseid käsitsi! Sul on aega 55 sekundit.</p>' +
+  '<p>Raund <?php echo (int)$roundConfig['round']; ?> / 3. Paiguta laused õigesse järjekorda, kasutades lõikamist ja kleepimist. Ära kirjuta lauseid käsitsi! Sul on aega <?php echo (int)$roundConfig['time_limit']; ?> sekundit.</p>' +
   '<ul>' +
   '<li><b>' + (macInstructions ? '⌘↓' : 'Ctrl+End') + '</b> — liigu teksti lõppu</li>' +
   '<li><b>' + (macInstructions ? '⌘Shift+←' : 'Shift+Home') + '</b> — vali tekst kursorist rea alguseni</li>' +
@@ -174,6 +156,7 @@ let timerInterval  = null;
 let sessionTracker = null;
 const textareas    = [];
 const rows         = <?php echo (int)$rows; ?>;
+const timeLimit    = <?php echo (int)$roundConfig['time_limit']; ?>;
 const isMac        = /Mac|iPhone|iPad|iPod/.test(navigator.platform) || /Mac/.test(navigator.userAgent);
 
 // Lühijuttude näidised
@@ -527,7 +510,7 @@ function handleInput() {
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-  if (elapsed >= 55) {
+  if (elapsed >= timeLimit) {
     clearInterval(timerInterval);
     // Mark session as complete (failed)
     if (sessionTracker) sessionTracker.complete();

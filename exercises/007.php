@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('007', [
+    1 => ['required_wpm' => 20, 'required_accuracy' => 90, 'time_limit' => 30],
+    2 => ['required_wpm' => 25, 'required_accuracy' => 90, 'time_limit' => 30],
+    3 => ['required_wpm' => 30, 'required_accuracy' => 90, 'time_limit' => 30],
+]);
+?>
 
 <style>
     #typing-table {
@@ -230,8 +239,8 @@
     }
 </style>
 
-<p>Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 30, Täpsus ≥ 90%</p>
+<p>Raund <?= $roundConfig['round'] ?> / 3. Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ <?= $roundConfig['required_wpm'] ?>, Täpsus ≥ <?= $roundConfig['required_accuracy'] ?>%</p>
 
 <form id="task-form">
     <table id="typing-table">
@@ -252,7 +261,7 @@
         <div class="stat-row">
             <div class="stat-item">
                 <span class="stat-label">Järelejäänud aeg:</span>
-                <span class="stat-value" id="timer">30.0 s</span>
+                <span class="stat-value" id="timer"><?= number_format($roundConfig['time_limit'], 1) ?> s</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">WPM:</span>
@@ -303,10 +312,9 @@
 </div>
 
 <script>
-    // Requirements: 30 WPM, 90% accuracy
-    const REQUIRED_WPM = 30;
-    const REQUIRED_ACCURACY = 90;
-    const TIME_LIMIT = 30;
+    const REQUIRED_WPM = <?= (int) $roundConfig['required_wpm'] ?>;
+    const REQUIRED_ACCURACY = <?= (int) $roundConfig['required_accuracy'] ?>;
+    const TIME_LIMIT = <?= (int) $roundConfig['time_limit'] ?>;
 
     // Estonian common words
     const estonianWords = [

@@ -1,10 +1,15 @@
 <?php
-require_once __DIR__ . '/../models/ResultsModel.php';
+require_once __DIR__ . '/round_config.php';
 
 $exerciseId = htmlspecialchars($_GET['task'] ?? '001');
 $model       = new ResultsModel();
 $exercise    = $model->getExercise($exerciseId) ?? [];
 $targetTime  = (int) ($exercise['target_time'] ?? 60);
+$roundConfig = getExerciseRoundConfig('001', [
+    1 => ['rows' => 15, 'target_time' => $targetTime + 30],
+    2 => ['rows' => 22, 'target_time' => $targetTime + 15],
+    3 => ['rows' => 30, 'target_time' => $targetTime],
+]);
 ?>
 <style>
     #word-table {
@@ -84,7 +89,7 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
 <p>
     Kopeeri igasse tekstikasti täpselt see sama sõna, mis on vasakul.
     Kui kõik sõnad on õigesti sisestatud, mõõdetakse aeg.
-    Sul on aega <?= $targetTime ?> sekundit.
+    Raund <?= $roundConfig['round'] ?> / 3. Sul on aega <?= $roundConfig['target_time'] ?> sekundit.
 </p>
 
 <table id="word-table">
@@ -103,8 +108,8 @@ $targetTime  = (int) ($exercise['target_time'] ?? 60);
 
 <script>
     (() => {
-        const rows = 30;
-        const targetTime = <?= $targetTime ?>;
+        const rows = <?= (int) $roundConfig['rows'] ?>;
+        const targetTime = <?= (int) $roundConfig['target_time'] ?>;
 
         const tableBody    = document.querySelector('#word-table tbody');
         const timerDisplay = document.getElementById('timer');

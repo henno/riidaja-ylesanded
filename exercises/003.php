@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('003', [
+    1 => ['rows' => 7, 'time_limit' => 90],
+    2 => ['rows' => 10, 'time_limit' => 75],
+    3 => ['rows' => 13, 'time_limit' => 60],
+]);
+?>
 <style>
   #url-table {
     width: 100%;
@@ -41,7 +50,7 @@
   }
 </style>
 
-<p>Kustuta igast URL-ist nõutud osa. Iga URL-i puhul on vaja kustutada erinev osa (alati kuni URL-i lõpuni). Tekstikast ei näita kogu URL-i, seega on soovitatav kasutada klaviatuuri kiirklahve (nt "vali kursori kohast kuni rea lõpuni" ja siis kustuta). Kui URL on õigesti muudetud, muutub tekstikasti taust roheliseks. Sul on aega 1 minut (60 sekundit).</p>
+<p>Raund <?= $roundConfig['round'] ?> / 3. Kustuta igast URL-ist nõutud osa. Iga URL-i puhul on vaja kustutada erinev osa (alati kuni URL-i lõpuni). Tekstikast ei näita kogu URL-i, seega on soovitatav kasutada klaviatuuri kiirklahve (nt "vali kursori kohast kuni rea lõpuni" ja siis kustuta). Kui URL on õigesti muudetud, muutub tekstikasti taust roheliseks. Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
 <form id="task-form">
   <table id="url-table">
     <thead>
@@ -59,7 +68,8 @@ let startTime      = null;
 let timerInterval  = null;
 let sessionTracker = null;
 const inputs       = [];
-const rows         = 13;
+const rows         = <?= (int) $roundConfig['rows'] ?>;
+const timeLimit    = <?= (int) $roundConfig['time_limit'] ?>;
 
 // URL-id ja juhendid
 const urlTasks = [
@@ -293,7 +303,7 @@ function handleInput() {
 function updateTimer() {
   const elapsed = (Date.now() - startTime) / 1000;
   timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-  if (elapsed >= 60) {
+  if (elapsed >= timeLimit) {
     clearInterval(timerInterval);
     // Mark session as complete (failed)
     if (sessionTracker) sessionTracker.complete();

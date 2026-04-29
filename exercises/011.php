@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('011', [
+    1 => ['required_wpm' => 12, 'required_accuracy' => 97, 'time_limit' => 30, 'sentence_count' => 10],
+    2 => ['required_wpm' => 15, 'required_accuracy' => 97, 'time_limit' => 30, 'sentence_count' => 15],
+    3 => ['required_wpm' => 17, 'required_accuracy' => 97, 'time_limit' => 30, 'sentence_count' => 20],
+]);
+?>
 
 <style>
     #typing-table {
@@ -249,8 +258,8 @@
     }
 </style>
 
-<p>Pimekirjutamise harjutus lausetega. Kirjuta ekraanil kuvatavad laused võimalikult kiiresti ja täpselt. Vale klahvi vajutamisel ei saa edasi – vajuta õiget tähte. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 17, Täpsus ≥ 97%</p>
+<p>Raund <?= $roundConfig['round'] ?> / 3. Pimekirjutamise harjutus lausetega. Kirjuta ekraanil kuvatavad laused võimalikult kiiresti ja täpselt. Vale klahvi vajutamisel ei saa edasi - vajuta õiget tähte. Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ <?= $roundConfig['required_wpm'] ?>, Täpsus ≥ <?= $roundConfig['required_accuracy'] ?>%</p>
 
 <div class="options-row">
     <label><input type="checkbox" id="fixed-text-toggle"> Sama tekst igal korral</label>
@@ -275,7 +284,7 @@
         <div class="stat-row">
             <div class="stat-item">
                 <span class="stat-label">Järelejäänud aeg:</span>
-                <span class="stat-value" id="timer">30.0 s</span>
+                <span class="stat-value" id="timer"><?= number_format($roundConfig['time_limit'], 1) ?> s</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">WPM:</span>
@@ -326,10 +335,10 @@
 </div>
 
 <script>
-    // Requirements: 17 WPM, 97% accuracy
-    const REQUIRED_WPM = 17;
-    const REQUIRED_ACCURACY = 97;
-    const TIME_LIMIT = 30;
+    const REQUIRED_WPM = <?= (int) $roundConfig['required_wpm'] ?>;
+    const REQUIRED_ACCURACY = <?= (int) $roundConfig['required_accuracy'] ?>;
+    const TIME_LIMIT = <?= (int) $roundConfig['time_limit'] ?>;
+    const SENTENCE_COUNT = <?= (int) $roundConfig['sentence_count'] ?>;
     const STORAGE_KEY = 'exercise011_fixed_text';
     const STORAGE_CHECKBOX_KEY = 'exercise011_fixed_enabled';
 
@@ -437,7 +446,7 @@
         }
 
         // Generate new text from random sentences
-        const sentences = getRandomSentences(20);
+        const sentences = getRandomSentences(SENTENCE_COUNT);
         const fullText = sentences.join(' ');
         const words = fullText.split(' ');
 

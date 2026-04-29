@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('005', [
+    1 => ['time_limit' => 120],
+    2 => ['time_limit' => 90],
+    3 => ['time_limit' => 60],
+]);
+?>
 
     <style>
         #text-correction-table {
@@ -82,7 +91,7 @@
         }
     </style>
 
-<p>Kustuta parempoolses tekstikastis liigsed sõnad. Vasakul näed õiget teksti (kuidas peab olema). Paremal on parandatav tekst - roheline on õige, punane sõna tuleb kustutada. Sul on aega 60 sekundit.</p>
+<p>Raund <?= $roundConfig['round'] ?> / 3. Kustuta parempoolses tekstikastis liigsed sõnad. Vasakul näed õiget teksti (kuidas peab olema). Paremal on parandatav tekst - roheline on õige, punane sõna tuleb kustutada. Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
 
 <form id="task-form">
     <table id="text-correction-table">
@@ -110,6 +119,7 @@
     const editableText = document.getElementById('editable-text');
     const timerDisplay = document.getElementById('timer');
     const progressDisplay = document.getElementById('progress');
+    const timeLimit = <?= (int) $roundConfig['time_limit'] ?>;
 
     let startTime = null;
     let timerInterval = null;
@@ -374,7 +384,7 @@
     function updateTimer() {
         const elapsed = (Date.now() - startTime) / 1000;
         timerDisplay.textContent = `Kulunud aeg: ${elapsed.toFixed(2)} s`;
-        if (elapsed >= 60) {
+        if (elapsed >= timeLimit) {
             clearInterval(timerInterval);
             // Mark session as complete (failed)
             if (sessionTracker) sessionTracker.complete();

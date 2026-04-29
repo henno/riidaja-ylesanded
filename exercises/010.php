@@ -1,3 +1,12 @@
+<?php
+require_once __DIR__ . '/round_config.php';
+
+$roundConfig = getExerciseRoundConfig('010', [
+    1 => ['required_wpm' => 12, 'required_accuracy' => 97, 'time_limit' => 30],
+    2 => ['required_wpm' => 15, 'required_accuracy' => 97, 'time_limit' => 30],
+    3 => ['required_wpm' => 17, 'required_accuracy' => 97, 'time_limit' => 30],
+]);
+?>
 
 <style>
     #typing-table {
@@ -239,8 +248,8 @@
     }
 </style>
 
-<p>Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Vale klahvi vajutamisel ei saa edasi – vajuta õiget tähte. Sul on aega 30 sekundit.</p>
-<p class="requirements" id="requirements">Nõuded: WPM ≥ 17, Täpsus ≥ 97%</p>
+<p>Raund <?= $roundConfig['round'] ?> / 3. Pimekirjutamise harjutus. Kirjuta ekraanil kuvatavad sõnad võimalikult kiiresti ja täpselt. Vale klahvi vajutamisel ei saa edasi - vajuta õiget tähte. Sul on aega <?= $roundConfig['time_limit'] ?> sekundit.</p>
+<p class="requirements" id="requirements">Nõuded: WPM ≥ <?= $roundConfig['required_wpm'] ?>, Täpsus ≥ <?= $roundConfig['required_accuracy'] ?>%</p>
 
 <form id="task-form">
     <table id="typing-table">
@@ -261,7 +270,7 @@
         <div class="stat-row">
             <div class="stat-item">
                 <span class="stat-label">Järelejäänud aeg:</span>
-                <span class="stat-value" id="timer">30.0 s</span>
+                <span class="stat-value" id="timer"><?= number_format($roundConfig['time_limit'], 1) ?> s</span>
             </div>
             <div class="stat-item">
                 <span class="stat-label">WPM:</span>
@@ -312,10 +321,9 @@
 </div>
 
 <script>
-    // Requirements: 20 WPM, 97% accuracy
-    const REQUIRED_WPM = 17;
-    const REQUIRED_ACCURACY = 97;
-    const TIME_LIMIT = 30;
+    const REQUIRED_WPM = <?= (int) $roundConfig['required_wpm'] ?>;
+    const REQUIRED_ACCURACY = <?= (int) $roundConfig['required_accuracy'] ?>;
+    const TIME_LIMIT = <?= (int) $roundConfig['time_limit'] ?>;
 
     // Estonian common words
     const estonianWords = [
