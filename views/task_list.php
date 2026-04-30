@@ -84,8 +84,8 @@
       }
     }
 
-    if (!function_exists('roundTooltip')) {
-      function roundTooltip($exerciseId, $round, $exercise = null) {
+    if (!function_exists('roundConditionText')) {
+      function roundConditionText($exerciseId, $round, $exercise = null) {
         $targetTime = $exercise && isset($exercise['target_time']) ? (int)$exercise['target_time'] : 60;
 
         $conditions = [
@@ -166,8 +166,13 @@
           ],
         ];
 
-        $text = $conditions[$exerciseId][$round] ?? 'Raundi tingimused pole seadistatud';
-        return 'Raund ' . $round . ' / 3: ' . $text;
+        return $conditions[$exerciseId][$round] ?? 'Raundi tingimused pole seadistatud';
+      }
+    }
+
+    if (!function_exists('roundTooltip')) {
+      function roundTooltip($exerciseId, $round, $exercise = null) {
+        return 'Raund ' . $round . ' / 3: ' . roundConditionText($exerciseId, $round, $exercise);
       }
     }
 
@@ -193,39 +198,29 @@
       $exercise = $resultsModel->getExercise($id);
       $resultType = $exercise && isset($exercise['result_type']) ? $exercise['result_type'] : 'time';
 
+      // Get user's attempts for this exercise
+      $attempts = $resultsModel->getUserAttempts($userEmail, $id);
+      $completionCount = count($attempts);
+      $passedAttempts = array_values(array_filter($attempts, function($v) { return floatval($v) > 0; }));
+      $passedCount = count($passedAttempts);
+      $currentRound = min($passedCount + 1, 3);
+      $targetFormatted = 'Raund ' . $currentRound . ': ' . roundConditionText($id, $currentRound, $exercise);
+
       // Format based on result type
       if ($resultType === 'wpm') {
-        // WPM exercises: show WPM requirements and format results as WPM
-        $reqAccuracy = ($exercise && isset($exercise['required_accuracy']) && $exercise['required_accuracy'] !== null)
-          ? round($exercise['required_accuracy']) : 90;
-        $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
-          ? round($exercise['target_time']) . ' WPM, ' . $reqAccuracy . '%'
-          : '-';
+        // WPM exercises: format results as WPM
         $myBestFormatted = ($myBest !== null && $myBest !== false) ? round($myBest) . ' WPM' : '-';
         $bestFormatted = ($best && isset($best['elapsed']) && $best['elapsed'] !== null)
           ? round($best['elapsed']) . ' WPM (' . htmlspecialchars($best['name']) . ')'
           : '-';
         $avgFormatted = ($avg !== null && $avg !== false) ? round($avg) . ' WPM' : '-';
-      } else {
-        // Time exercises: show seconds
-        $targetFormatted = ($exercise && isset($exercise['target_time']) && $exercise['target_time'] !== null)
-          ? number_format($exercise['target_time'], 2) . ' s'
-          : '-';
       }
-
-      // Get user's attempts for this exercise
-      $attempts = $resultsModel->getUserAttempts($userEmail, $id);
-      $completionCount = count($attempts);
 
       // Generate completion boxes HTML
       $completionBoxes = '<div class="completion-container">';
 
       // Special handling for WPM exercises (only count passed attempts)
       if ($resultType === 'wpm') {
-        // Filter only positive values (passed attempts)
-        $passedAttempts = array_filter($attempts, function($v) { return floatval($v) > 0; });
-        $passedCount = count($passedAttempts);
-
         if ($passedCount == 0) {
           // No passed attempts - show gray boxes
           for ($i = 0; $i < 3; $i++) {
@@ -233,7 +228,7 @@
           }
         } elseif ($passedCount < 3) {
           // Show passed attempts (green boxes with WPM)
-          $passedValues = array_values($passedAttempts);
+          $passedValues = $passedAttempts;
           for ($i = 0; $i < $passedCount; $i++) {
             $wpm = round($passedValues[$i]);
             $completionBoxes .= completionBox('passed', $wpm, roundTooltip($id, $i + 1, $exercise));
@@ -244,7 +239,7 @@
           }
         } else {
           // 3+ passed attempts - show last 3 in green
-          $passedValues = array_values($passedAttempts);
+          $passedValues = $passedAttempts;
           $lastThree = array_slice($passedValues, -3);
           foreach ($lastThree as $i => $wpm) {
             $completionBoxes .= completionBox('passed', round($wpm), roundTooltip($id, $i + 1, $exercise));
@@ -253,11 +248,6 @@
       }
       // Standard exercises (time-based)
       else {
-        // Filter only positive values (passed attempts)
-        $passedAttempts = array_filter($attempts, function($v) { return floatval($v) > 0; });
-        $passedAttempts = array_values($passedAttempts); // Re-index array
-        $passedCount = count($passedAttempts);
-
         // When the student has not passed the exercise a single time: 3 gray boxes with question marks
         if ($passedCount == 0) {
           for ($i = 0; $i < 3; $i++) {
@@ -294,7 +284,7 @@
       echo '<tr>';
       echo '<td><a href="?page=tasks&task=' . $id . '">Ülesanne ' . $id . '</a></td>';
       echo '<td>' . $completionBoxes . '</td>';
-      echo '<td>' . $targetFormatted . '</td>';
+      echo '<td>' . htmlspecialchars($targetFormatted) . '</td>';
       echo '<td>' . $myBestFormatted . '</td>';
       echo '<td>' . $bestFormatted . '</td>';
       echo '<td>' . $avgFormatted . '</td>';
