@@ -63,6 +63,9 @@
     display: flex;
     justify-content: center;
   }
+  .required-result-cell {
+    text-align: left;
+  }
 </style>
 <table>
   <thead>
@@ -204,7 +207,7 @@
       $passedAttempts = array_values(array_filter($attempts, function($v) { return floatval($v) > 0; }));
       $passedCount = count($passedAttempts);
       $currentRound = min($passedCount + 1, 3);
-      $targetFormatted = 'Raund ' . $currentRound . ': ' . roundConditionText($id, $currentRound, $exercise);
+      $targetFormatted = roundConditionText($id, $currentRound, $exercise);
 
       // Format based on result type
       if ($resultType === 'wpm') {
@@ -284,7 +287,7 @@
       echo '<tr>';
       echo '<td><a href="?page=tasks&task=' . $id . '">Ülesanne ' . $id . '</a></td>';
       echo '<td>' . $completionBoxes . '</td>';
-      echo '<td>' . htmlspecialchars($targetFormatted) . '</td>';
+      echo '<td class="required-result-cell">' . htmlspecialchars($targetFormatted) . '</td>';
       echo '<td>' . $myBestFormatted . '</td>';
       echo '<td>' . $bestFormatted . '</td>';
       echo '<td>' . $avgFormatted . '</td>';
