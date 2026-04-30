@@ -4,7 +4,7 @@ require_once __DIR__ . '/round_config.php';
 $roundConfig = getExerciseRoundConfig('005', [
     1 => ['time_limit' => 120],
     2 => ['time_limit' => 90],
-    3 => ['time_limit' => 60],
+    3 => ['time_limit' => 40],
 ]);
 ?>
 

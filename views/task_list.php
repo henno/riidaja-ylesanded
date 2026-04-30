@@ -112,7 +112,7 @@
           '005' => [
             1 => 'Kustuta liigsed sõnad, aeg 120 s',
             2 => 'Kustuta liigsed sõnad, aeg 90 s',
-            3 => 'Kustuta liigsed sõnad, aeg 60 s',
+            3 => 'Kustuta liigsed sõnad, aeg 40 s',
           ],
           '006' => [
             1 => 'WPM >= 8, täpsus >= 90%, aeg 30 s',
